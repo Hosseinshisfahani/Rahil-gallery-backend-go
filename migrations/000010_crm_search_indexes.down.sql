@@ -1,0 +1,7 @@
+DROP INDEX IF EXISTS idx_customer_profiles_import_categories;
+DROP INDEX IF EXISTS idx_customer_profiles_import_marriage;
+DROP INDEX IF EXISTS idx_customer_profiles_import_birthday;
+DROP INDEX IF EXISTS idx_customer_profiles_import_first_visit;
+DROP INDEX IF EXISTS idx_customer_profiles_import_customer_type;
+DROP INDEX IF EXISTS idx_customer_profiles_import_gender;
+DROP INDEX IF EXISTS idx_customer_profiles_import_age_range;

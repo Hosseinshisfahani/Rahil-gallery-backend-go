@@ -1,0 +1,41 @@
+# Environment
+.env
+.env.*
+!.env.example
+
+# Go build artifacts
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+/bin/
+/dist/
+/tmp/
+
+# Dependencies
+vendor/
+
+# Test & coverage
+coverage.out
+coverage.html
+*.prof
+*.pprof
+
+# Catalog seed images (fetched via make fetch-catalog-images)
+data/catalog-images/**
+!data/catalog-images/README.md
+!data/catalog-images/manifest.json
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Cursor
+.cursor/

@@ -1,0 +1,11 @@
+# Database + migrations only (run API locally with `go run ./cmd/api`)
+services:
+  db:
+    extends:
+      file: docker-compose.yml
+      service: db
+
+  migrate:
+    extends:
+      file: docker-compose.yml
+      service: migrate

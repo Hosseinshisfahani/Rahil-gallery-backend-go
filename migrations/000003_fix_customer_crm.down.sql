@@ -1,0 +1,1 @@
+-- No-op down: repair migration; use 000002 down to fully revert CRM.

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "source": "Flickr CC via loremflickr.com — fetched by scripts/fetch-catalog-images.sh",
+  "categories": {
+    "rings": "categories/rings.jpg",
+    "necklaces": "categories/necklaces.jpg",
+    "bracelets": "categories/bracelets.jpg",
+    "earrings": "categories/earrings.jpg",
+    "pendants": "categories/pendants.jpg"
+  },
+  "collections": {
+    "bridal": "collections/bridal.jpg",
+    "everyday": "collections/everyday.jpg",
+    "signature": "collections/signature.jpg"
+  },
+  "products": {
+    "ring": [
+      "products/rings/01.jpg",
+      "products/rings/02.jpg",
+      "products/rings/03.jpg",
+      "products/rings/04.jpg",
+      "products/rings/05.jpg",
+      "products/rings/06.jpg"
+    ],
+    "necklace": [
+      "products/necklaces/01.jpg",
+      "products/necklaces/02.jpg",
+      "products/necklaces/03.jpg",
+      "products/necklaces/04.jpg",
+      "products/necklaces/05.jpg"
+    ],
+    "bracelet": [
+      "products/bracelets/01.jpg",
+      "products/bracelets/02.jpg",
+      "products/bracelets/03.jpg",
+      "products/bracelets/04.jpg"
+    ],
+    "earring": [
+      "products/earrings/01.jpg",
+      "products/earrings/02.jpg",
+      "products/earrings/03.jpg",
+      "products/earrings/04.jpg"
+    ],
+    "pendant": [
+      "products/pendants/01.jpg",
+      "products/pendants/02.jpg",
+      "products/pendants/03.jpg"
+    ]
+  }
+}
