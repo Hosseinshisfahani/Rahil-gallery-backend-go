@@ -1,0 +1,63 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-api
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Unit tests
+        run: go test ./internal/... -count=1
+
+      - name: Build Docker image
+        run: docker build -t rahil-gallery-api:${{ github.sha }} .
+
+      - name: Save image tarball
+        run: docker save rahil-gallery-api:${{ github.sha }} | gzip > api-image.tar.gz
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
+
+      - name: Sync repo on server
+        run: |
+          rsync -az --delete \
+            --exclude '.git' \
+            --exclude '.env' \
+            --exclude 'data/customer-signatures' \
+            --exclude 'data/catalog-images' \
+            -e "ssh -o StrictHostKeyChecking=yes" \
+            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SERVER_DEPLOY_PATH }}/"
+
+      - name: Upload image and deploy
+        run: |
+          scp -o StrictHostKeyChecking=yes api-image.tar.gz \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/api-image.tar.gz"
+          ssh -o StrictHostKeyChecking=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "bash ${SERVER_DEPLOY_PATH}/scripts/deploy-remote.sh /tmp/api-image.tar.gz ${GITHUB_SHA}"
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+          SERVER_DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}
