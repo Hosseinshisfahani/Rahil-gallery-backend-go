@@ -23,3 +23,19 @@ See also: [docs/cicd-setup.md](./docs/cicd-setup.md) in the monorepo docs folder
 3. Add deploy public key to `authorized_keys`
 
 Production stack: `docker compose -f docker-compose.prod.yml up -d`
+
+## VPS without Docker Hub
+
+`make docker-up` **builds on the server** and needs `golang:1.22-alpine` from Docker Hub — it will fail with TLS timeout on blocked networks.
+
+Use one of these instead:
+
+| Goal | Command |
+|------|---------|
+| DB + migrations only, API via Go | `make docker-dev` then see below |
+| Go on VPS (try mirror first) | `export GOPROXY=https://goproxy.io,direct && make run` |
+| Go on VPS (offline) | Laptop: `bash scripts/bundle-api-binary.sh` → SCP → `./bin/rahil-api` |
+| Full stack with containerized API | CI/CD deploy, then `make docker-prod-up` |
+| Manual API image transfer | build locally → `docker save` → `docker load` on VPS → `make docker-prod-up` |
+
+Required once on VPS: load base images via `scripts/bundle-docker-images.sh`.

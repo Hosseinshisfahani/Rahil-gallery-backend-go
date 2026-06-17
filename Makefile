@@ -3,19 +3,37 @@ MIGRATE_IMAGE ?= migrate/migrate:v4.18.1
 DATABASE_URL ?= postgres://postgres:postgres@127.0.0.1:5432/rahil_gallery?sslmode=disable
 # Used when Postgres runs in Docker Compose (service name: db)
 MIGRATE_DATABASE_DOCKER ?= postgres://postgres:postgres@db:5432/rahil_gallery?sslmode=disable
+# VPS: proxy.golang.org is often blocked — use goproxy.io or vendor/offline binary instead.
+GOPROXY ?= https://goproxy.io,https://goproxy.cn,direct
+export GOPROXY
 
 .PHONY: test test-unit test-bdd test-feature test-integration \
 	migrate-up migrate-down migrate-create migrate-up-local \
 	seed seed-reset seed-small seed-products fetch-catalog-images \
-	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-logs docker-migrate \
-	run dev
+	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-logs docker-migrate \
+	run dev run-vendor build-linux run-binary
 
 # Local API on :8080 (requires: make docker-dev, .env with DATABASE_URL)
+# On blocked VPS: try `make run-vendor` after `make vendor`, or use `make run-binary`.
 run dev:
 	go run ./cmd/api
 
+run-vendor:
+	go run -mod=vendor ./cmd/api
+
+build-linux:
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/rahil-api ./cmd/api
+
+run-binary:
+	./bin/rahil-api
+
+# Dev machine only — pulls golang/alpine from Docker Hub (fails on blocked VPS).
 docker-up:
 	docker compose up -d --build
+
+# VPS / production — no build; uses pre-loaded image from CI/CD (rahil-gallery-api:latest).
+docker-prod-up:
+	docker compose -f docker-compose.prod.yml up -d
 
 docker-vendor:
 	go mod vendor
