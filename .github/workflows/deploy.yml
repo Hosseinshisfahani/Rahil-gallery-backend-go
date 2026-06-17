@@ -40,15 +40,22 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Sync repo on server
+      - name: Sync repo files on server
         run: |
-          rsync -az --delete \
-            --exclude '.git' \
-            --exclude '.env' \
-            --exclude 'data/customer-signatures' \
-            --exclude 'data/catalog-images' \
-            -e "ssh -o StrictHostKeyChecking=yes" \
-            ./ "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:${{ secrets.SERVER_DEPLOY_PATH }}/"
+          tar -czf repo-sync.tar.gz \
+            --exclude='./.git' \
+            --exclude='./.env' \
+            --exclude='./data/customer-signatures' \
+            --exclude='./data/catalog-images' \
+            --exclude='./bin' \
+            .
+          scp -o StrictHostKeyChecking=yes repo-sync.tar.gz \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-repo-sync.tar.gz"
+          ssh -o StrictHostKeyChecking=yes \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            "mkdir -p ${SERVER_DEPLOY_PATH} && tar -xzf /tmp/server-repo-sync.tar.gz -C ${SERVER_DEPLOY_PATH} && rm -f /tmp/server-repo-sync.tar.gz"
+        env:
+          SERVER_DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}
 
       - name: Upload image and deploy
         run: |
