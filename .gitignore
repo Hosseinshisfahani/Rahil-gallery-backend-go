@@ -29,6 +29,10 @@ data/catalog-images/**
 !data/catalog-images/README.md
 !data/catalog-images/manifest.json
 
+# Customer signature uploads (runtime; not committed)
+data/customer-signatures/**
+!data/customer-signatures/README.md
+
 # IDE / OS
 .idea/
 .vscode/

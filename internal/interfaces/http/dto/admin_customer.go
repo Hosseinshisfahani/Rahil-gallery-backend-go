@@ -34,9 +34,11 @@ type CustomerSummaryResponse struct {
 	TotalLtv         float64  `json:"totalLtv"`
 	Segment          string   `json:"segment"`
 	Status           string   `json:"status"`
-	IsVip            bool     `json:"isVip"`
-	Tags             []string `json:"tags"`
-	Country          string   `json:"country"`
+	IsVip               bool     `json:"isVip"`
+	Tags                []string `json:"tags"`
+	CustomerType        string   `json:"customerType"`
+	PurchasedCategories []string `json:"purchasedCategories"`
+	Country             string   `json:"country"`
 	Href             string   `json:"href"`
 }
 
@@ -154,21 +156,24 @@ type AddNoteRequest struct {
 }
 
 func ToCustomerSummary(row domain.ListRow) CustomerSummaryResponse {
+	domain.NormalizeListRowCRM(&row)
 	id := row.ID.String()
 	resp := CustomerSummaryResponse{
-		ID:             id,
-		FullName:       row.FullName,
-		Phone:          row.Phone,
-		RegisteredAt:   formatDate(row.RegisteredAt),
-		LastActivityAt: formatDatePtr(row.LastActivityAt, row.RegisteredAt),
-		TotalOrders:    row.TotalOrders,
-		TotalLtv:       row.TotalLTV,
-		Segment:        string(row.Segment),
-		Status:         row.Status,
-		IsVip:          row.IsVIP,
-		Tags:           row.Tags,
-		Country:        "IR",
-		Href:           "/admin/customers/" + id,
+		ID:                  id,
+		FullName:            row.FullName,
+		Phone:               row.Phone,
+		RegisteredAt:        formatDate(row.RegisteredAt),
+		LastActivityAt:      formatDatePtr(row.LastActivityAt, row.RegisteredAt),
+		TotalOrders:         row.TotalOrders,
+		TotalLtv:            row.TotalLTV,
+		Segment:             string(row.Segment),
+		Status:              row.Status,
+		IsVip:               row.IsVIP,
+		Tags:                row.Tags,
+		CustomerType:        *row.CustomerType,
+		PurchasedCategories: row.PurchasedCategories,
+		Country:             "IR",
+		Href:                "/admin/customers/" + id,
 	}
 	if row.LastPurchaseDate != nil {
 		d := formatDate(*row.LastPurchaseDate)
@@ -177,10 +182,14 @@ func ToCustomerSummary(row domain.ListRow) CustomerSummaryResponse {
 	if resp.Tags == nil {
 		resp.Tags = []string{}
 	}
+	if resp.PurchasedCategories == nil {
+		resp.PurchasedCategories = append([]string(nil), domain.DefaultPurchasedCategories...)
+	}
 	return resp
 }
 
 func ToCustomerDetail(d *domain.Detail) CustomerDetailResponse {
+	enrichListRowCRMFromImportProfile(&d.ListRow, d.ImportProfile)
 	summary := ToCustomerSummary(d.ListRow)
 	detail := CustomerDetailResponse{
 		CustomerSummaryResponse: summary,
@@ -222,6 +231,26 @@ func ToCustomerDetail(d *domain.Detail) CustomerDetailResponse {
 		detail.ImportProfile = d.ImportProfile
 	}
 	return detail
+}
+
+func enrichListRowCRMFromImportProfile(row *domain.ListRow, importProfile json.RawMessage) {
+	if row == nil || len(importProfile) == 0 {
+		return
+	}
+	var profile struct {
+		CustomerType        string   `json:"customerType"`
+		PurchasedCategories []string `json:"purchasedCategories"`
+	}
+	if err := json.Unmarshal(importProfile, &profile); err != nil {
+		return
+	}
+	if (row.CustomerType == nil || *row.CustomerType == "") && profile.CustomerType != "" {
+		ct := profile.CustomerType
+		row.CustomerType = &ct
+	}
+	if len(row.PurchasedCategories) == 0 && len(profile.PurchasedCategories) > 0 {
+		row.PurchasedCategories = profile.PurchasedCategories
+	}
 }
 
 func ToPaginatedCustomers(result domain.ListResult) PaginatedCustomersResponse {

@@ -24,6 +24,7 @@ func NewApp(deps RouterDeps) *fiber.App {
 	app.Use(cors.New())
 
 	registerCatalogStatic(app, deps.Config.CatalogAssetsDir)
+	registerCustomerSignaturesStatic(app, deps.Config.CustomerSignaturesDir)
 
 	health := handler.NewHealthHandler(deps.Pool)
 	app.Get("/health", health.Liveness)
@@ -40,7 +41,7 @@ func NewApp(deps RouterDeps) *fiber.App {
 	if deps.Pool != nil {
 		tokenProvider := RegisterAuthRoutes(api, deps.Config, postgresAuthWire(deps.Pool))
 		RegisterCatalogRoutes(api, deps.Pool)
-		RegisterAdminCustomerRoutes(api, tokenProvider, postgresAdminCustomerWire(deps.Pool))
+		RegisterAdminCustomerRoutes(api, tokenProvider, postgresAdminCustomerWire(deps.Pool), deps.Config.CustomerSignaturesDir)
 		RegisterAdminProductRoutes(api, tokenProvider, deps.Pool)
 	}
 
@@ -60,6 +61,21 @@ func registerCatalogStatic(app *fiber.App, dir string) {
 		CacheDuration: 86400,
 	})
 	log.Printf("serving catalog images from %s at /static/catalog", dir)
+}
+
+func registerCustomerSignaturesStatic(app *fiber.App, dir string) {
+	if dir == "" {
+		return
+	}
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		log.Printf("could not create customer signatures dir at %s: %v", dir, err)
+		return
+	}
+	app.Static("/static/customer-signatures", dir, fiber.Static{
+		Compress:      true,
+		CacheDuration: 3600,
+	})
+	log.Printf("serving customer signatures from %s at /static/customer-signatures", dir)
 }
 
 func defaultErrorHandler(c *fiber.Ctx, err error) error {

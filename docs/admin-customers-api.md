@@ -413,6 +413,8 @@ Returned in list responses.
 | `status` | string | `active` or `blocked` |
 | `isVip` | boolean | VIP flag |
 | `tags` | string[] | Operational tags |
+| `customerType` | string? | CRM customer type (from import profile) |
+| `purchasedCategories` | string[] | CRM product categories (from import profile) |
 | `country` | string | Always `"IR"` |
 | `href` | string | Admin UI path, e.g. `/admin/customers/{id}` |
 

@@ -1,6 +1,6 @@
 MIGRATIONS_PATH ?= migrations
 MIGRATE_IMAGE ?= migrate/migrate:v4.18.1
-DATABASE_URL ?= postgres://postgres:postgres@127.0.0.1:55432/rahil_gallery?sslmode=disable
+DATABASE_URL ?= postgres://postgres:postgres@127.0.0.1:5432/rahil_gallery?sslmode=disable
 # Used when Postgres runs in Docker Compose (service name: db)
 MIGRATE_DATABASE_DOCKER ?= postgres://postgres:postgres@db:5432/rahil_gallery?sslmode=disable
 

@@ -11,6 +11,7 @@ import (
 	domain "github.com/rahil-gallery/rahil-gallery-server/internal/domain/customer"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/identity"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/shared"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/storage/customersignature"
 )
 
 var (
@@ -60,17 +61,24 @@ type UpdateInput struct {
 }
 
 type Service struct {
-	users    identity.UserRepository
-	roles    identity.RoleRepository
-	customer domain.Repository
+	users      identity.UserRepository
+	roles      identity.RoleRepository
+	customer   domain.Repository
+	signatures customersignature.Store
 }
 
 func NewService(
 	users identity.UserRepository,
 	roles identity.RoleRepository,
 	customer domain.Repository,
+	signaturesDir string,
 ) *Service {
-	return &Service{users: users, roles: roles, customer: customer}
+	return &Service{
+		users:      users,
+		roles:      roles,
+		customer:   customer,
+		signatures: customersignature.Store{Dir: signaturesDir},
+	}
 }
 
 func (s *Service) List(ctx context.Context, filter domain.ListFilter, page, perPage int) (domain.ListResult, error) {
@@ -251,6 +259,7 @@ func (s *Service) Create(ctx context.Context, adminID shared.ID, in CreateInput)
 	var importProfile json.RawMessage
 
 	if in.ImportMode == string(domain.ImportModeHistoryIncluded) && in.ImportProfile != nil {
+		normalizeImportProfileInput(in.ImportProfile)
 		mode := domain.ImportModeHistoryIncluded
 		importMode = &mode
 		if in.ImportProfile.CustomerType == "vip" {
@@ -263,6 +272,10 @@ func (s *Service) Create(ctx context.Context, adminID shared.ID, in CreateInput)
 	} else if in.ImportMode == string(domain.ImportModeQuick) || in.ImportMode == "" {
 		mode := domain.ImportModeQuick
 		importMode = &mode
+		importProfile, err = domain.MarshalMinimalImportProfile(first, last, phone)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var vipSource *domain.VIPSource
@@ -382,6 +395,7 @@ func (s *Service) Update(ctx context.Context, adminID, userID shared.ID, in Upda
 		profile.Tags = *in.Tags
 	}
 	if in.ImportProfile != nil {
+		normalizeImportProfileInput(in.ImportProfile)
 		profile.ImportProfile, err = domain.MarshalImportProfile(*in.ImportProfile)
 		if err != nil {
 			return nil, err
@@ -622,6 +636,18 @@ func splitName(full string) (string, string) {
 
 func normalizeEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func normalizeImportProfileInput(p *domain.ImportProfileInput) {
+	if p == nil {
+		return
+	}
+	if strings.TrimSpace(p.CustomerType) == "" {
+		p.CustomerType = domain.DefaultCustomerType
+	}
+	if len(p.PurchasedCategories) == 0 {
+		p.PurchasedCategories = append([]string(nil), domain.DefaultPurchasedCategories...)
+	}
 }
 
 func strPtr(s string) *string {

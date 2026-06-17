@@ -18,7 +18,8 @@ type Config struct {
 	JWTAccessSecret   string
 	JWTAccessTTL      time.Duration
 	JWTRefreshTTL     time.Duration
-	CatalogAssetsDir  string
+	CatalogAssetsDir         string
+	CustomerSignaturesDir    string
 }
 
 func Load() (Config, error) {
@@ -54,7 +55,8 @@ func Load() (Config, error) {
 		JWTAccessSecret:  secret,
 		JWTAccessTTL:     accessTTL,
 		JWTRefreshTTL:    refreshTTL,
-		CatalogAssetsDir: getEnv("CATALOG_ASSETS_DIR", "data/catalog-images"),
+		CatalogAssetsDir:      getEnv("CATALOG_ASSETS_DIR", "data/catalog-images"),
+		CustomerSignaturesDir: getEnv("CUSTOMER_SIGNATURES_DIR", "data/customer-signatures"),
 	}
 
 	return cfg, nil

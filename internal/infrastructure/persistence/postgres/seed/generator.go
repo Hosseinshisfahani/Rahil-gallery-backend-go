@@ -123,18 +123,13 @@ var crmGenders = []string{"male", "female", "other"}
 
 var crmAgeRanges = []string{"1-7", "7-14", "14-21", "21-40", "40+"}
 
-var crmCustomerTypes = []string{
-	"foreign_and_tour_guidance", "vip", "public", "colleagues", "family_and_friends",
-}
+var crmCustomerTypes = CRMCustomerTypes
 
-var crmCategories = []string{
-	"gold_and_stones", "silver_and_stones", "stones_and_roughs",
-	"gold_and_gemstones", "silver_and_gemstones", "gemstones_and_special_roughs",
-}
+var crmCategories = CRMPurchasedCategories
 
-// bulkHasCRMProfile returns true for ~67 % of bulk customers.
+// bulkHasCRMProfile returns true for all bulk customers.
 func bulkHasCRMProfile(index int) bool {
-	return index%3 != 0
+	return true
 }
 
 // bulkCRMGender returns a gender string; ~14 % of CRM customers have it unset.

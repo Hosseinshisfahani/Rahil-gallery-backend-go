@@ -152,7 +152,9 @@ SELECT
   %s AS segment,
   %s AS status,
   COALESCE(cp.is_vip, FALSE),
-  COALESCE(cp.tags, '{}')
+  COALESCE(cp.tags, '{}'),
+  ` + crmCustomerTypeExpr + `,
+  ` + crmPurchasedCategoriesExpr + `
 %s %s
 ORDER BY u.created_at DESC
 LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.args)+1, len(q.args)+2)
@@ -171,11 +173,14 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 		var email *string
 		var lastActivity, lastPurchase *time.Time
 		var tags []string
+		var customerType *string
+		var purchasedCategories []string
 		if err := rows.Scan(
 			&row.ID, &row.FullName, &row.Phone, &email,
 			&row.RegisteredAt, &lastActivity, &lastPurchase,
 			&row.TotalOrders, &row.TotalLTV,
 			&row.Segment, &row.Status, &row.IsVIP, &tags,
+			&customerType, &purchasedCategories,
 		); err != nil {
 			return nil, err
 		}
@@ -183,6 +188,9 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 		row.LastActivityAt = lastActivity
 		row.LastPurchaseDate = lastPurchase
 		row.Tags = tags
+		row.CustomerType = customerType
+		row.PurchasedCategories = purchasedCategories
+		domain.NormalizeListRowCRM(&row)
 		items = append(items, row)
 	}
 	return items, rows.Err()
@@ -204,6 +212,8 @@ SELECT
   ` + statusExpr + `,
   COALESCE(cp.is_vip, FALSE),
   COALESCE(cp.tags, '{}'),
+  ` + crmCustomerTypeExpr + `,
+  ` + crmPurchasedCategoriesExpr + `,
   COALESCE(cp.locale, 'fa'),
   cp.default_ring_size,
   cp.first_purchase_at,
@@ -223,6 +233,8 @@ WHERE u.id = $1 AND u.deleted_at IS NULL`
 	var blockNote *string
 	var defaultRing *string
 	var lastActivity, lastPurchase, firstPurchase *time.Time
+	var customerType *string
+	var purchasedCategories []string
 	var importProfile []byte
 
 	err := r.pool.QueryRow(ctx, q, userID, identity.RoleCustomer).Scan(
@@ -230,6 +242,7 @@ WHERE u.id = $1 AND u.deleted_at IS NULL`
 		&d.RegisteredAt, &lastActivity, &lastPurchase,
 		&d.TotalOrders, &d.TotalLTV,
 		&d.Segment, &d.Status, &d.IsVIP, &d.Tags,
+		&customerType, &purchasedCategories,
 		&d.Locale, &defaultRing, &firstPurchase,
 		&vipSource, &blockReason, &blockNote, &importMode, &importProfile,
 	)
@@ -246,7 +259,10 @@ WHERE u.id = $1 AND u.deleted_at IS NULL`
 	d.FirstPurchaseDate = firstPurchase
 	d.DefaultRingSize = defaultRing
 	d.BlockNote = blockNote
+	d.CustomerType = customerType
+	d.PurchasedCategories = purchasedCategories
 	d.ImportProfile = importProfile
+	domain.NormalizeListRowCRM(&d.ListRow)
 
 	if vipSource != nil {
 		v := domain.VIPSource(*vipSource)

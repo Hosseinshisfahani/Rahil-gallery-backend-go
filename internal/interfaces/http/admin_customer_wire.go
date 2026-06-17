@@ -27,8 +27,8 @@ func postgresAdminCustomerWire(pool *pgxpool.Pool) AdminCustomerWire {
 	}
 }
 
-func RegisterAdminCustomerRoutes(router fiber.Router, tokenProvider tokens.TokenProvider, wire AdminCustomerWire) {
-	svc := appcustomer.NewService(wire.Users, wire.Roles, wire.Customer)
+func RegisterAdminCustomerRoutes(router fiber.Router, tokenProvider tokens.TokenProvider, wire AdminCustomerWire, signaturesDir string) {
+	svc := appcustomer.NewService(wire.Users, wire.Roles, wire.Customer, signaturesDir)
 	h := handler.NewAdminCustomerHandler(svc)
 
 	jwtAuth := middleware.JWTAuth(tokenProvider)
@@ -53,4 +53,6 @@ func RegisterAdminCustomerRoutes(router fiber.Router, tokenProvider tokens.Token
 	admin.Post("/:id/vip", h.ToggleVIP)
 	admin.Post("/:id/tags", h.ToggleTag)
 	admin.Post("/:id/notes", h.AddNote)
+	admin.Post("/:id/signature", h.UploadSignature)
+	admin.Delete("/:id/signature", h.DeleteSignature)
 }

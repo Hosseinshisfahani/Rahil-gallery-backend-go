@@ -14,6 +14,14 @@ const segmentExpr = `COALESCE(cp.segment, 'new')`
 
 const statusExpr = `CASE WHEN u.status = 'banned' THEN 'blocked' ELSE 'active' END`
 
+const crmCustomerTypeExpr = `COALESCE(NULLIF(cp.crm_customer_type, ''), 'public')`
+
+const crmPurchasedCategoriesExpr = `COALESCE(
+  (SELECT array_agg(elem ORDER BY elem)
+   FROM jsonb_array_elements_text(COALESCE(cp.import_profile->'purchasedCategories', '[]'::jsonb)) AS elem),
+  ARRAY['gold_and_stones']::text[]
+)`
+
 const listBaseFrom = `
 FROM users u
 INNER JOIN roles r ON r.id = u.role_id AND r.name = $1
@@ -143,19 +151,26 @@ func buildAdvancedQuery(filter domain.ListFilter, args []any) listQuery {
 		return listQuery{
 			cte:   fmt.Sprintf(advancedProfileCTETpl, strings.Join(plan.profileConds, " AND ")),
 			from:  advancedProfileFrom,
-			where: joinWhere(plan.userConds),
+			where: formatWhere(plan.userConds),
 			args:  args,
 		}
 	}
 
-	return listQuery{from: listBaseFrom, where: joinWhere(plan.userConds), args: args}
+	return listQuery{from: listBaseFrom, where: appendWhere(plan.userConds), args: args}
 }
 
-func joinWhere(conds []string) string {
+func appendWhere(conds []string) string {
 	if len(conds) == 0 {
 		return ""
 	}
 	return "AND " + strings.Join(conds, " AND ")
+}
+
+func formatWhere(conds []string) string {
+	if len(conds) == 0 {
+		return ""
+	}
+	return "WHERE " + strings.Join(conds, " AND ")
 }
 
 func buildAdvancedFilterPlan(filter domain.ListFilter, args []any, next int) (advancedFilterPlan, []any, int) {

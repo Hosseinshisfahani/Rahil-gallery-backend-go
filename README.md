@@ -63,7 +63,7 @@ make run
 # API: http://localhost:8080
 ```
 
-`make run` loads `.env` automatically (including `DATABASE_URL` on port 55432).
+`make run` loads `.env` automatically (including `DATABASE_URL` on port 5432).
 
 Useful commands:
 

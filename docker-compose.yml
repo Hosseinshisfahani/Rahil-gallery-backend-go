@@ -43,6 +43,7 @@ services:
       - "${APP_PORT:-8080}:8080"
     volumes:
       - ./data/catalog-images:/app/data/catalog-images:ro
+      - ./data/customer-signatures:/app/data/customer-signatures
     environment:
       APP_ENV: ${APP_ENV:-development}
       APP_HOST: 0.0.0.0
@@ -52,6 +53,7 @@ services:
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-168h}
       CATALOG_ASSETS_DIR: /app/data/catalog-images
+      CUSTOMER_SIGNATURES_DIR: /app/data/customer-signatures
     depends_on:
       db:
         condition: service_healthy

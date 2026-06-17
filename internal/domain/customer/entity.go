@@ -131,6 +131,8 @@ type ListRow struct {
 	Status           string
 	IsVIP            bool
 	Tags             []string
+	CustomerType     *string
+	PurchasedCategories []string
 }
 
 type Detail struct {

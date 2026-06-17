@@ -105,6 +105,10 @@ func Run(ctx context.Context, pool *pgxpool.Pool, opts Options) error {
 		return fmt.Errorf("bulk products: %w", err)
 	}
 
+	if err := r.backfillMissingCRMProfiles(ctx); err != nil {
+		return fmt.Errorf("backfill CRM profiles: %w", err)
+	}
+
 	log.Println("seed: done")
 	log.Printf("  customers total: %d", opts.Customers)
 	log.Printf("  products total:  %d", opts.Products)

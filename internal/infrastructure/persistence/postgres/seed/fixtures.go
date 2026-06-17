@@ -16,54 +16,57 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 	loginEmail := "customer@rehil.gallery"
 
 	now := time.Now().UTC()
-	historyProfile := `{
-		"firstName": "Maryam",
-		"lastName": "Karimi",
-		"job": "Architect",
-		"phone": "+989211334455",
-		"email": "maryam.k@example.com",
-		"address": "Tehran, Vanak",
-		"birthday": "1990-05-12",
-		"marriageDate": "2018-03-20",
-		"firstVisitDate": "2024-10-15",
-		"customerType": "vip",
-		"customerAgeRange": "21-40",
-		"purchasedCategories": ["gold_and_gemstones", "silver_and_stones"],
-		"description": "Visited for bridal consultation",
-		"signature": "M. Karimi"
-	}`
-
-	quick := "quick"
 	history := "history_included"
 	manual := "manual"
 	blockReason := "fraud_suspicion"
 	blockNote := "Multiple chargeback attempts"
 	ring14 := "14"
 
+	maryamProfileObj := seedImportProfile{
+		FirstName: "Maryam", LastName: "Karimi", Phone: "+989211334455",
+		Email: "maryam.k@example.com", Job: "Architect", Address: "Tehran, Vanak",
+		Birthday: "1990-05-12", MarriageDate: "2018-03-20", FirstVisitDate: "2024-10-15",
+		CustomerType: "vip", CustomerAgeRange: "21-40",
+		PurchasedCategories: []string{"gold_and_gemstones", "silver_and_stones"},
+		Description: "Visited for bridal consultation", Signature: "M. Karimi",
+	}
+	maryamProfileJSON, err := marshalImportProfile(maryamProfileObj)
+	if err != nil {
+		return err
+	}
+
 	customers := []customerSeed{
 		{
 			id: IDCustomerSara.String(), first: "Sara", last: "Mohammadi",
 			phone: "+989121234567", email: strPtr("sara@example.com"),
 			status: "active", locale: "fa", ringSize: &ring14,
-			isVIP: true, vipSource: &manual, importMode: &quick,
+			isVIP: true, vipSource: &manual, importMode: &history,
+			customerType: "vip",
+			purchasedCategories: []string{"gold_and_gemstones", "silver_and_stones"},
 			tags: []string{"VIP", "High spender", "Bridal customer"},
 			lastActivityDaysAgo: 1, registeredDaysAgo: 450,
 		},
 		{
 			id: IDCustomerAli.String(), first: "Ali", last: "Rezaei",
 			phone: "+989351112233", email: &loginEmail, passwordHash: &customerHash,
-			status: "active", locale: "fa", importMode: &quick,
+			status: "active", locale: "fa", importMode: &history,
+			customerType: "public",
+			purchasedCategories: []string{"gold_and_stones"},
 			tags: []string{"High spender"},
 			lastActivityDaysAgo: 0, registeredDaysAgo: 520,
 		},
 		{
 			id: IDCustomerNeda.String(), first: "Neda", last: "Karimi",
-			phone: "+989211223344", status: "active", locale: "fa", importMode: &quick,
+			phone: "+989211223344", status: "active", locale: "fa", importMode: &history,
+			customerType: "colleagues",
+			purchasedCategories: []string{"silver_and_gemstones"},
 			tags: []string{"Bridal customer"}, lastActivityDaysAgo: 3, registeredDaysAgo: 900,
 		},
 		{
 			id: IDCustomerReza.String(), first: "Reza", last: "Ahmadi",
-			phone: "+989121998877", status: "banned", locale: "fa", importMode: &quick,
+			phone: "+989121998877", status: "banned", locale: "fa", importMode: &history,
+			customerType: "family_and_friends",
+			purchasedCategories: []string{"stones_and_roughs"},
 			tags: []string{"At-risk"}, blockReason: &blockReason, blockNote: &blockNote,
 			lastActivityDaysAgo: 120, registeredDaysAgo: 300,
 		},
@@ -71,24 +74,30 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			id: IDCustomerMaryam.String(), first: "Maryam", last: "Karimi",
 			phone: "+989211334455", email: strPtr("maryam.k@example.com"),
 			status: "active", locale: "fa", isVIP: true, vipSource: &manual,
-			importMode: &history, importProfile: &historyProfile,
+			importMode: &history, importProfile: &maryamProfileJSON,
 			tags: []string{"VIP", "Bridal customer"},
 			lastActivityDaysAgo: 14, registeredDaysAgo: 200,
 		},
 		{
 			id: IDCustomerHossein.String(), first: "Hossein", last: "Moradi",
-			phone: "+989331445566", status: "active", locale: "en", importMode: &quick,
+			phone: "+989331445566", status: "active", locale: "en", importMode: &history,
+			customerType: "foreign_and_tour_guidance",
+			purchasedCategories: []string{"gold_and_gemstones", "gemstones_and_special_roughs"},
 			lastActivityDaysAgo: 100, registeredDaysAgo: 100,
 		},
 		{
 			id: IDCustomerLeila.String(), first: "Leila", last: "Shirazi",
 			phone: "+989121556677", email: strPtr("leila@example.com"),
-			status: "active", locale: "fa", ringSize: &ring14, importMode: &quick,
+			status: "active", locale: "fa", ringSize: &ring14, importMode: &history,
+			customerType: "public",
+			purchasedCategories: []string{"silver_and_stones"},
 			tags: []string{"Influencer lead"}, lastActivityDaysAgo: 7, registeredDaysAgo: 60,
 		},
 		{
 			id: IDCustomerOmid.String(), first: "Omid", last: "Farhadi",
-			phone: "+989191887766", status: "active", locale: "fa", importMode: &quick,
+			phone: "+989191887766", status: "active", locale: "fa", importMode: &history,
+			customerType: "colleagues",
+			purchasedCategories: []string{"gold_and_stones", "silver_and_gemstones"},
 			lastActivityDaysAgo: 2, registeredDaysAgo: 30,
 		},
 	}
@@ -99,6 +108,19 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 		tags := c.tags
 		if tags == nil {
 			tags = []string{}
+		}
+
+		importProfile := c.importProfile
+		if importProfile == nil && c.customerType != "" {
+			profileJSON, err := fixtureImportProfile(
+				c.first, c.last, c.phone, c.email,
+				c.customerType, c.purchasedCategories,
+				now, c.registeredDaysAgo,
+			)
+			if err != nil {
+				return fmt.Errorf("build profile %s: %w", c.phone, err)
+			}
+			importProfile = &profileJSON
 		}
 
 		if err := exec(ctx, tx, `
@@ -118,8 +140,17 @@ INSERT INTO customer_profiles (
 	user_id, locale, default_ring_size, is_vip, vip_source, import_mode, import_profile,
 	tags, block_reason, block_note, last_activity_at, created_at, updated_at
 ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$12)
-ON CONFLICT (user_id) DO NOTHING`,
-			c.id, c.locale, c.ringSize, c.isVIP, c.vipSource, c.importMode, c.importProfile,
+ON CONFLICT (user_id) DO UPDATE SET
+	import_mode = EXCLUDED.import_mode,
+	import_profile = EXCLUDED.import_profile,
+	is_vip = EXCLUDED.is_vip,
+	vip_source = EXCLUDED.vip_source,
+	tags = EXCLUDED.tags,
+	block_reason = EXCLUDED.block_reason,
+	block_note = EXCLUDED.block_note,
+	last_activity_at = EXCLUDED.last_activity_at,
+	updated_at = EXCLUDED.updated_at`,
+			c.id, c.locale, c.ringSize, c.isVIP, c.vipSource, c.importMode, importProfile,
 			tags, c.blockReason, c.blockNote, lastActivity, registered,
 		); err != nil {
 			return fmt.Errorf("insert profile %s: %w", c.phone, err)
@@ -248,6 +279,8 @@ type customerSeed struct {
 	vipSource              *string
 	importMode             *string
 	importProfile          *string
+	customerType           string
+	purchasedCategories    []string
 	tags                   []string
 	blockReason            *string
 	blockNote              *string

@@ -12,6 +12,9 @@ import (
 )
 
 type bulkCRMProfile struct {
+	FirstName           string   `json:"firstName"`
+	LastName            string   `json:"lastName"`
+	Phone               string   `json:"phone"`
 	Gender              string   `json:"gender,omitempty"`
 	CustomerAgeRange    string   `json:"customerAgeRange"`
 	CustomerType        string   `json:"customerType"`
@@ -22,7 +25,11 @@ type bulkCRMProfile struct {
 }
 
 func buildCRMProfileJSON(now time.Time, index int) (string, error) {
+	first, last := pickName(index)
 	p := bulkCRMProfile{
+		FirstName:           first,
+		LastName:            last,
+		Phone:               bulkPhone(index),
 		Gender:              bulkCRMGender(index),
 		CustomerAgeRange:    bulkCRMAgeRange(index),
 		CustomerType:        bulkCRMCustomerType(index),
@@ -96,14 +103,12 @@ func (r *Runner) seedBulkCustomers(ctx context.Context, roleCustomer string) err
 				first, last, bulkUserStatus(i), registered, registered,
 			})
 
-			var importMode, importProfile any
-			if bulkHasCRMProfile(i) {
-				profileJSON, err := buildCRMProfileJSON(now, i)
-				if err == nil {
-					importMode = "history_included"
-					importProfile = profileJSON
-				}
+			profileJSON, err := buildCRMProfileJSON(now, i)
+			if err != nil {
+				return fmt.Errorf("bulk CRM profile %d: %w", i, err)
 			}
+			importMode := "history_included"
+			importProfile := profileJSON
 
 			profileRows = append(profileRows, []any{
 				bulkCustomerID(i), bulkLocale(i), nil, isVIP, vipSource,

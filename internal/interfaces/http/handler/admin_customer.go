@@ -2,6 +2,9 @@ package handler
 
 import (
 	"errors"
+	"io"
+	"mime"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -11,6 +14,7 @@ import (
 	appcustomer "github.com/rahil-gallery/rahil-gallery-server/internal/application/customer"
 	domain "github.com/rahil-gallery/rahil-gallery-server/internal/domain/customer"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/shared"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/storage/customersignature"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/interfaces/http/dto"
 )
 
@@ -196,6 +200,68 @@ func (h *AdminCustomerHandler) ToggleTag(c *fiber.Ctx) error {
 	return c.JSON(dto.ToCustomerDetail(detail))
 }
 
+func (h *AdminCustomerHandler) UploadSignature(c *fiber.Ctx) error {
+	id, err := dto.ParseCustomerID(c.Params("id"))
+	if err != nil {
+		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
+	}
+
+	file, err := c.FormFile("file")
+	if err != nil {
+		return customerBadRequest(c, "VALIDATION_ERROR", "signature file is required")
+	}
+
+	f, err := file.Open()
+	if err != nil {
+		return customerBadRequest(c, "VALIDATION_ERROR", "could not read uploaded file")
+	}
+	defer f.Close()
+
+	data, err := io.ReadAll(io.LimitReader(f, customersignature.MaxBytes+1))
+	if err != nil {
+		return customerBadRequest(c, "VALIDATION_ERROR", "could not read uploaded file")
+	}
+	if len(data) > customersignature.MaxBytes {
+		return customerBadRequest(c, "VALIDATION_ERROR", customersignature.ErrTooLarge.Error())
+	}
+
+	contentType := strings.TrimSpace(file.Header.Get("Content-Type"))
+	if contentType == "" {
+		contentType = mime.TypeByExtension(filepath.Ext(file.Filename))
+	}
+
+	adminID, err := userIDFromLocals(c)
+	if err != nil {
+		return customerUnauthorized(c)
+	}
+
+	detail, err := h.svc.UploadSignature(c.Context(), adminID, id, contentType, data)
+	if err != nil {
+		return mapCustomerError(c, err)
+	}
+
+	return c.JSON(dto.ToCustomerDetail(detail))
+}
+
+func (h *AdminCustomerHandler) DeleteSignature(c *fiber.Ctx) error {
+	id, err := dto.ParseCustomerID(c.Params("id"))
+	if err != nil {
+		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
+	}
+
+	adminID, err := userIDFromLocals(c)
+	if err != nil {
+		return customerUnauthorized(c)
+	}
+
+	detail, err := h.svc.DeleteSignature(c.Context(), adminID, id)
+	if err != nil {
+		return mapCustomerError(c, err)
+	}
+
+	return c.JSON(dto.ToCustomerDetail(detail))
+}
+
 func (h *AdminCustomerHandler) AddNote(c *fiber.Ctx) error {
 	id, err := dto.ParseCustomerID(c.Params("id"))
 	if err != nil {
@@ -352,6 +418,8 @@ func mapCustomerError(c *fiber.Ctx, err error) error {
 		return customerConflict(c, "CONFLICT", err.Error())
 	case errors.Is(err, appcustomer.ErrInvalidBlockReason), errors.Is(err, appcustomer.ErrInvalidTag),
 		errors.Is(err, appcustomer.ErrInvalidSavedView), errors.Is(err, appcustomer.ErrSavedViewNameRequired):
+		return customerBadRequest(c, "VALIDATION_ERROR", err.Error())
+	case errors.Is(err, customersignature.ErrInvalidType), errors.Is(err, customersignature.ErrTooLarge):
 		return customerBadRequest(c, "VALIDATION_ERROR", err.Error())
 	case errors.Is(err, shared.ErrForbidden):
 		return customerForbidden(c)
