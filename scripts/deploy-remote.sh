@@ -62,13 +62,22 @@ prepare_database_url_docker
 echo "==> Loading API image from ${IMAGE_TAR}"
 gunzip -c "${IMAGE_TAR}" | docker load
 
-LOADED="$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^rahil-gallery-api:' | head -1 || true)"
-if [[ -z "${LOADED}" ]]; then
-  echo "ERROR: rahil-gallery-api image not found after docker load" >&2
-  exit 1
+if docker image inspect "rahil-gallery-api:${GIT_SHA}" >/dev/null 2>&1; then
+  docker tag "rahil-gallery-api:${GIT_SHA}" rahil-gallery-api:latest
+  echo "==> Tagged rahil-gallery-api:${GIT_SHA} as latest"
+else
+  LOADED="$(docker images --format '{{.Repository}}:{{.Tag}}' | grep "^rahil-gallery-api:${GIT_SHA}$" | head -1 || true)"
+  if [[ -z "${LOADED}" ]]; then
+    LOADED="$(docker images --format '{{.Repository}}:{{.Tag}}' | grep '^rahil-gallery-api:' | grep -v ':latest$' | head -1 || true)"
+  fi
+  if [[ -z "${LOADED}" ]]; then
+    echo "ERROR: rahil-gallery-api:${GIT_SHA} not found after docker load" >&2
+    exit 1
+  fi
+  docker tag "${LOADED}" rahil-gallery-api:latest
+  echo "==> Tagged ${LOADED} as latest"
 fi
 
-docker tag "${LOADED}" rahil-gallery-api:latest
 export API_IMAGE="rahil-gallery-api:latest"
 
 if [[ ! -f .env ]]; then
@@ -87,8 +96,18 @@ echo "==> Ensuring database is up"
 echo "==> Running migrations"
 "${COMPOSE[@]}" up migrate --abort-on-container-exit
 
-echo "==> Starting API"
-"${COMPOSE[@]}" up -d api
+echo "==> Starting API (force recreate so :latest image updates apply)"
+"${COMPOSE[@]}" up -d --force-recreate --no-deps api
+
+RUNNING_IMAGE="$(docker inspect rahil-gallery-api --format '{{.Image}}' 2>/dev/null || true)"
+LATEST_IMAGE="$(docker image inspect rahil-gallery-api:latest --format '{{.Id}}' 2>/dev/null || true)"
+if [[ -n "${RUNNING_IMAGE}" && -n "${LATEST_IMAGE}" && "${RUNNING_IMAGE}" != "${LATEST_IMAGE}" ]]; then
+  echo "ERROR: API container is not running the latest loaded image" >&2
+  echo "       container=${RUNNING_IMAGE}" >&2
+  echo "       latest=${LATEST_IMAGE}" >&2
+  exit 1
+fi
+echo "    API container image matches rahil-gallery-api:latest (${GIT_SHA})"
 
 if [[ "${OBSERVABILITY_ENABLED}" == "true" ]]; then
   echo "==> Ensuring observability images (prometheus, grafana) exist locally"

@@ -6,6 +6,7 @@ FROM golang:1.22-alpine AS builder
 # Or vendor locally: make docker-vendor && docker compose -f docker-compose.yml -f docker-compose.vendor.yml build api
 ARG GOPROXY=https://goproxy.io,https://proxy.golang.org,direct
 ARG GOSUMDB=sum.golang.org
+ARG GIT_SHA=dev
 ENV GOPROXY=${GOPROXY}
 ENV GOSUMDB=${GOSUMDB}
 
@@ -19,6 +20,9 @@ COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /out/api ./cmd/api
 
 FROM alpine:3.20
+
+ARG GIT_SHA=dev
+LABEL org.opencontainers.image.revision="${GIT_SHA}"
 
 RUN apk add --no-cache ca-certificates tzdata wget
 
