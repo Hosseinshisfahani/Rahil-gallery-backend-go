@@ -11,15 +11,18 @@ import (
 )
 
 type Config struct {
-	Env               string
-	Host              string
-	Port              int
-	DatabaseURL       string
-	JWTAccessSecret   string
-	JWTAccessTTL      time.Duration
-	JWTRefreshTTL     time.Duration
-	CatalogAssetsDir         string
-	CustomerSignaturesDir    string
+	Env                        string
+	Host                       string
+	Port                       int
+	DatabaseURL                string
+	JWTAccessSecret            string
+	JWTAccessTTL               time.Duration
+	JWTRefreshTTL              time.Duration
+	CatalogAssetsDir           string
+	CustomerSignaturesDir      string
+	ObservabilityIngestKey     string
+	ObservabilityRetentionDays int
+	MetricsEnabled             bool
 }
 
 func Load() (Config, error) {
@@ -47,16 +50,24 @@ func Load() (Config, error) {
 		secret = "dev-only-change-in-production"
 	}
 
+	retentionDays, err := strconv.Atoi(getEnv("OBSERVABILITY_RETENTION_DAYS", "7"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid OBSERVABILITY_RETENTION_DAYS: %w", err)
+	}
+
 	cfg := Config{
-		Env:              getEnv("APP_ENV", "development"),
-		Host:             getEnv("APP_HOST", "0.0.0.0"),
-		Port:             port,
-		DatabaseURL:      os.Getenv("DATABASE_URL"),
-		JWTAccessSecret:  secret,
-		JWTAccessTTL:     accessTTL,
-		JWTRefreshTTL:    refreshTTL,
-		CatalogAssetsDir:      getEnv("CATALOG_ASSETS_DIR", "data/catalog-images"),
-		CustomerSignaturesDir: getEnv("CUSTOMER_SIGNATURES_DIR", "data/customer-signatures"),
+		Env:                        getEnv("APP_ENV", "development"),
+		Host:                       getEnv("APP_HOST", "0.0.0.0"),
+		Port:                       port,
+		DatabaseURL:                os.Getenv("DATABASE_URL"),
+		JWTAccessSecret:            secret,
+		JWTAccessTTL:               accessTTL,
+		JWTRefreshTTL:              refreshTTL,
+		CatalogAssetsDir:           getEnv("CATALOG_ASSETS_DIR", "data/catalog-images"),
+		CustomerSignaturesDir:      getEnv("CUSTOMER_SIGNATURES_DIR", "data/customer-signatures"),
+		ObservabilityIngestKey:     os.Getenv("OBSERVABILITY_INGEST_KEY"),
+		ObservabilityRetentionDays: retentionDays,
+		MetricsEnabled:             getEnv("METRICS_ENABLED", "true") != "false",
 	}
 
 	return cfg, nil

@@ -53,6 +53,9 @@ services:
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-168h}
       CATALOG_ASSETS_DIR: /app/data/catalog-images
       CUSTOMER_SIGNATURES_DIR: /app/data/customer-signatures
+      OBSERVABILITY_RETENTION_DAYS: ${OBSERVABILITY_RETENTION_DAYS:-7}
+      OBSERVABILITY_INGEST_KEY: ${OBSERVABILITY_INGEST_KEY:-}
+      METRICS_ENABLED: ${METRICS_ENABLED:-true}
     depends_on:
       db:
         condition: service_healthy

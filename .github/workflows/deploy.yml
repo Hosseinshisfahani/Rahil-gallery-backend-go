@@ -45,6 +45,8 @@ jobs:
           tar -czf repo-sync.tar.gz \
             scripts/deploy-remote.sh \
             docker-compose.prod.yml \
+            docker-compose.observability.yml \
+            deploy/observability \
             migrations
           scp -o StrictHostKeyChecking=yes repo-sync.tar.gz \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-repo-sync.tar.gz"

@@ -10,7 +10,7 @@ export GOPROXY
 .PHONY: test test-unit test-bdd test-feature test-integration \
 	migrate-up migrate-down migrate-create migrate-up-local \
 	seed seed-reset seed-small seed-products fetch-catalog-images \
-	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-logs docker-migrate \
+	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-observability-up docker-logs docker-migrate \
 	run dev run-vendor build-linux run-binary
 
 # Local API on :8080 (requires: make docker-dev, .env with DATABASE_URL)
@@ -34,6 +34,9 @@ docker-up:
 # VPS / production — no build; uses pre-loaded image from CI/CD (rahil-gallery-api:latest).
 docker-prod-up:
 	docker compose -f docker-compose.prod.yml up -d
+
+docker-observability-up:
+	docker compose -f docker-compose.observability.yml up -d
 
 docker-vendor:
 	go mod vendor
