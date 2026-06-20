@@ -27,6 +27,38 @@ require_image() {
   fi
 }
 
+load_env() {
+  if [[ ! -f .env ]]; then
+    return
+  fi
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+}
+
+# Migrate/API use host `db` inside Compose. Always derive from DATABASE_URL when set
+# so a stale DATABASE_URL_DOCKER in .env cannot break deploy.
+prepare_database_url_docker() {
+  if [[ -n "${DATABASE_URL:-}" ]]; then
+    export DATABASE_URL_DOCKER="$(
+      printf '%s' "$DATABASE_URL" | sed -E 's/(postgres(ql)?:\/\/[^@]+@)[^:/]+/\1db/'
+    )"
+    echo "==> Using DATABASE_URL_DOCKER derived from DATABASE_URL"
+    return
+  fi
+  if [[ -n "${DATABASE_URL_DOCKER:-}" ]]; then
+    export DATABASE_URL_DOCKER
+    echo "==> Using DATABASE_URL_DOCKER from .env"
+    return
+  fi
+  echo "ERROR: set DATABASE_URL (recommended) or DATABASE_URL_DOCKER in .env" >&2
+  exit 1
+}
+
+load_env
+prepare_database_url_docker
+
 echo "==> Loading API image from ${IMAGE_TAR}"
 gunzip -c "${IMAGE_TAR}" | docker load
 
@@ -40,7 +72,7 @@ docker tag "${LOADED}" rahil-gallery-api:latest
 export API_IMAGE="rahil-gallery-api:latest"
 
 if [[ ! -f .env ]]; then
-  echo "WARN: .env missing — copy from .env.example and set JWT_ACCESS_SECRET" >&2
+  echo "WARN: .env missing — copy from .env.example and set JWT_ACCESS_SECRET + DATABASE_URL" >&2
 fi
 
 echo "==> Ensuring base images (postgres, migrate) exist locally"

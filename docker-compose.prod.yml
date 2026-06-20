@@ -1,8 +1,8 @@
 # Production stack — API uses a pre-built image loaded on the server (CI/CD).
 # Usage: API_IMAGE=rahil-gallery-api:latest docker compose -f docker-compose.prod.yml up -d
 #
-# Set DATABASE_URL_DOCKER in .env (host `db`) — must match credentials used when Postgres was first created.
-# Example: postgres://postgres:YOUR_PASSWORD@db:5432/rahil_gallery?sslmode=disable
+# Set DATABASE_URL in .env — deploy and make docker-prod-* derive DATABASE_URL_DOCKER (host `db`) automatically.
+# Do not set DATABASE_URL_DOCKER unless DATABASE_URL is unset; a wrong value breaks migrations.
 services:
   db:
     image: ${POSTGRES_IMAGE:-postgres:16-alpine}
@@ -30,7 +30,7 @@ services:
       - ./migrations:/migrations:ro
     command:
       - -path=/migrations
-      - -database=${DATABASE_URL_DOCKER:?Set DATABASE_URL_DOCKER in .env — see .env.example}
+      - -database=${DATABASE_URL_DOCKER}
       - up
     depends_on:
       db:
@@ -50,7 +50,7 @@ services:
       APP_ENV: ${APP_ENV:-production}
       APP_HOST: 0.0.0.0
       APP_PORT: 8080
-      DATABASE_URL: ${DATABASE_URL_DOCKER:?Set DATABASE_URL_DOCKER in .env — see .env.example}
+      DATABASE_URL: ${DATABASE_URL_DOCKER}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET is required}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-168h}

@@ -44,6 +44,7 @@ jobs:
         run: |
           tar -czf repo-sync.tar.gz \
             scripts/deploy-remote.sh \
+            scripts/export-compose-env.sh \
             docker-compose.prod.yml \
             docker-compose.observability.yml \
             deploy/observability \
