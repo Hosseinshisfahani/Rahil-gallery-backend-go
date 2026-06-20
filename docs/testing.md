@@ -67,3 +67,34 @@ go run ./cmd/seed --customers=100000 --reset
 ```
 
 Bulk customers use phones `+98900XXXXXXXX` and emails `seed-*@rehil.dev` so reset stays fast. Credentials are printed on success. Refuses to run when `APP_ENV=production`.
+
+## Production bootstrap
+
+Creates only what production needs after migrations — an initial **admin** account (and optional **staff**). No demo customers, catalog, or orders.
+
+```bash
+# On VPS after migrate (set strong password in .env first)
+export APP_ENV=production
+export SEED_ADMIN_PASSWORD='YourSecurePass1'
+make seed-prod
+
+# Rotate admin password later
+export SEED_ADMIN_PASSWORD='NewSecurePass1'
+make seed-prod-password
+```
+
+Environment variables:
+
+| Variable | Required | Default |
+|----------|----------|---------|
+| `SEED_ADMIN_PASSWORD` | yes | — |
+| `SEED_ADMIN_EMAIL` | no | `admin@rehil.gallery` |
+| `SEED_ADMIN_FIRST_NAME` | no | `Admin` |
+| `SEED_ADMIN_LAST_NAME` | no | `Rehil` |
+| `SEED_ADMIN_PHONE` | no | — |
+| `SEED_STAFF_EMAIL` | no* | — |
+| `SEED_STAFF_PASSWORD` | no* | — |
+
+\* Both staff email and password must be set to create a staff account.
+
+Password rules match registration: at least 8 characters with one letter and one digit. Passwords are never printed. Idempotent: skips if an admin account already exists.

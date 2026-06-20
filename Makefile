@@ -9,7 +9,7 @@ export GOPROXY
 
 .PHONY: test test-unit test-bdd test-feature test-integration \
 	migrate-up migrate-down migrate-create migrate-up-local \
-	seed seed-reset seed-small seed-products fetch-catalog-images \
+	seed seed-reset seed-small seed-products seed-prod seed-prod-password fetch-catalog-images \
 	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-prod-migrate docker-prod-api docker-observability-up docker-logs docker-migrate \
 	run dev run-vendor build-linux run-binary
 
@@ -122,6 +122,14 @@ seed-small:
 
 seed-products:
 	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed --reset --customers=8 --products=$(SEED_PRODUCTS)
+
+# Production bootstrap — admin account only (no demo customers/catalog).
+# Requires APP_ENV=production (or --allow-dev for local smoke tests).
+seed-prod:
+	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed-prod
+
+seed-prod-password:
+	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed-prod --update-password
 
 fetch-catalog-images:
 	bash scripts/fetch-catalog-images.sh
