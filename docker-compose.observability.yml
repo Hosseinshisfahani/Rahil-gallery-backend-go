@@ -1,6 +1,9 @@
+# Observability stack — use together with docker-compose.prod.yml (same project/network as db + api).
+# Local / VPS: docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d
 services:
   prometheus:
-    image: prom/prometheus:v2.55.1
+    image: ${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}
+    container_name: rahil-gallery-prometheus
     restart: unless-stopped
     network_mode: host
     command:
@@ -15,7 +18,8 @@ services:
       - prometheus_data:/prometheus
 
   grafana:
-    image: grafana/grafana:11.4.0
+    image: ${GRAFANA_IMAGE:-grafana/grafana:11.4.0}
+    container_name: rahil-gallery-grafana
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -27,16 +31,9 @@ services:
     volumes:
       - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "3001:3000"
+      - "${GRAFANA_PORT:-3001}:3000"
     depends_on:
       - prometheus
-    networks:
-      - default
-      - rahil-gallery-server_default
 
 volumes:
   prometheus_data:
-
-networks:
-  rahil-gallery-server_default:
-    external: true

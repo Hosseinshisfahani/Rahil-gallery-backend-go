@@ -52,7 +52,7 @@ jobs:
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-repo-sync.tar.gz"
           ssh -o StrictHostKeyChecking=yes \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "mkdir -p ${SERVER_DEPLOY_PATH}/scripts ${SERVER_DEPLOY_PATH}/migrations && tar -xzf /tmp/server-repo-sync.tar.gz -C ${SERVER_DEPLOY_PATH} && rm -f /tmp/server-repo-sync.tar.gz"
+            "mkdir -p ${SERVER_DEPLOY_PATH}/scripts ${SERVER_DEPLOY_PATH}/migrations ${SERVER_DEPLOY_PATH}/deploy && tar -xzf /tmp/server-repo-sync.tar.gz -C ${SERVER_DEPLOY_PATH} && rm -f /tmp/server-repo-sync.tar.gz"
         env:
           SERVER_DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}
 

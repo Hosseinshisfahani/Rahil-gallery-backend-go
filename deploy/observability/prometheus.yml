@@ -4,7 +4,7 @@ global:
   evaluation_interval: 15s
   external_labels:
     project: rahil-gallery
-    environment: local
+    environment: production
 
 rule_files:
   - /etc/prometheus/rules/recording-rules.yml

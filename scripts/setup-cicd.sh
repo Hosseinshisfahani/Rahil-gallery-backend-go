@@ -100,4 +100,7 @@ set_github_secret "Rahil-Gallery-Client" "CLIENT_DEPLOY_PATH" "${CLIENT_PATH}"
 echo
 echo "Done. CI/CD secrets are configured."
 echo "Add the deploy public key to the VPS if you have not already."
-echo "Then push to master — GitHub Actions will deploy automatically."
+echo "One-time on VPS (blocked Docker Hub): bash scripts/bundle-docker-images.sh locally,"
+echo "  scp /tmp/rahil-docker-images.tar.gz to the server, then: gunzip -c ... | docker load"
+echo "Set GRAFANA_ADMIN_PASSWORD in ${SERVER_PATH}/.env on the VPS."
+echo "Then push to master — GitHub Actions will deploy API + Prometheus + Grafana automatically."

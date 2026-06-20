@@ -36,7 +36,7 @@ docker-prod-up:
 	docker compose -f docker-compose.prod.yml up -d
 
 docker-observability-up:
-	docker compose -f docker-compose.observability.yml up -d
+	docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d prometheus grafana
 
 docker-vendor:
 	go mod vendor

@@ -9,6 +9,23 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
 
 API_IMAGE="${API_IMAGE:-rahil-gallery-api:${GIT_SHA}}"
+OBSERVABILITY_ENABLED="${OBSERVABILITY_ENABLED:-true}"
+POSTGRES_IMAGE="${POSTGRES_IMAGE:-postgres:16-alpine}"
+MIGRATE_IMAGE="${MIGRATE_IMAGE:-migrate/migrate:v4.18.1}"
+PROMETHEUS_IMAGE="${PROMETHEUS_IMAGE:-prom/prometheus:v2.55.1}"
+GRAFANA_IMAGE="${GRAFANA_IMAGE:-grafana/grafana:11.4.0}"
+COMPOSE=(docker compose -f docker-compose.prod.yml)
+COMPOSE_OBS=(docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml)
+
+require_image() {
+  local image="$1"
+  local hint="$2"
+  if ! docker image inspect "${image}" >/dev/null 2>&1; then
+    echo "ERROR: ${image} not found locally." >&2
+    echo "       ${hint}" >&2
+    exit 1
+  fi
+}
 
 echo "==> Loading API image from ${IMAGE_TAR}"
 gunzip -c "${IMAGE_TAR}" | docker load
@@ -27,23 +44,48 @@ if [[ ! -f .env ]]; then
 fi
 
 echo "==> Ensuring base images (postgres, migrate) exist locally"
-if ! docker image inspect "${POSTGRES_IMAGE:-postgres:16-alpine}" >/dev/null 2>&1; then
-  echo "Postgres image missing. Run once: bash scripts/bundle-docker-images.sh (on a machine with Docker Hub), then load on this server."
-  exit 1
-fi
-if ! docker image inspect "${MIGRATE_IMAGE:-migrate/migrate:v4.18.1}" >/dev/null 2>&1; then
-  echo "Migrate image missing. Run once: bash scripts/bundle-docker-images.sh (on a machine with Docker Hub), then load on this server."
-  exit 1
-fi
+require_image "${POSTGRES_IMAGE}" \
+  "Run once on a machine with Docker Hub: bash scripts/bundle-docker-images.sh, then scp and docker load on this server."
+require_image "${MIGRATE_IMAGE}" \
+  "Run once on a machine with Docker Hub: bash scripts/bundle-docker-images.sh, then scp and docker load on this server."
 
 echo "==> Ensuring database is up"
-docker compose -f docker-compose.prod.yml up -d db
+"${COMPOSE[@]}" up -d db
 
 echo "==> Running migrations"
-docker compose -f docker-compose.prod.yml up migrate --abort-on-container-exit
+"${COMPOSE[@]}" up migrate --abort-on-container-exit
 
 echo "==> Starting API"
-docker compose -f docker-compose.prod.yml up -d api
+"${COMPOSE[@]}" up -d api
+
+if [[ "${OBSERVABILITY_ENABLED}" == "true" ]]; then
+  echo "==> Ensuring observability images (prometheus, grafana) exist locally"
+  require_image "${PROMETHEUS_IMAGE}" \
+    "Observability images are bundled with postgres/migrate in scripts/bundle-docker-images.sh — load them on this server."
+  require_image "${GRAFANA_IMAGE}" \
+    "Observability images are bundled with postgres/migrate in scripts/bundle-docker-images.sh — load them on this server."
+
+  echo "==> Starting observability stack (Prometheus + Grafana)"
+  export PROMETHEUS_IMAGE GRAFANA_IMAGE
+  "${COMPOSE_OBS[@]}" up -d prometheus grafana
+
+  echo "==> Reloading Prometheus configuration"
+  curl -sf -X POST http://127.0.0.1:9090/-/reload >/dev/null 2>&1 || true
+
+  if curl -sf http://127.0.0.1:9090/-/healthy >/dev/null; then
+    echo "    Prometheus: healthy (http://127.0.0.1:9090)"
+  else
+    echo "WARN: Prometheus health check failed — check logs: docker compose -f docker-compose.observability.yml logs prometheus" >&2
+  fi
+
+  if curl -sf http://127.0.0.1:3001/api/health >/dev/null; then
+    echo "    Grafana:    healthy (http://127.0.0.1:3001)"
+  else
+    echo "WARN: Grafana health check failed — check logs: docker compose -f docker-compose.observability.yml logs grafana" >&2
+  fi
+else
+  echo "==> Observability disabled (OBSERVABILITY_ENABLED=false)"
+fi
 
 echo "==> Pruning old API images (keep latest + current sha)"
 docker images rahil-gallery-api --format '{{.ID}} {{.Tag}}' \

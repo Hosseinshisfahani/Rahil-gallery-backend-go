@@ -56,6 +56,7 @@ services:
       OBSERVABILITY_RETENTION_DAYS: ${OBSERVABILITY_RETENTION_DAYS:-7}
       OBSERVABILITY_INGEST_KEY: ${OBSERVABILITY_INGEST_KEY:-}
       METRICS_ENABLED: ${METRICS_ENABLED:-true}
+      METRICS_SERVICE_NAME: ${METRICS_SERVICE_NAME:-rahil_api}
     depends_on:
       db:
         condition: service_healthy
