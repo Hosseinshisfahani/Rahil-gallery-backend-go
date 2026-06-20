@@ -24,6 +24,15 @@ run-vendor:
 build-linux:
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/rahil-api ./cmd/api
 
+# Linux CLI tools shipped to VPS by CI (no Go compiler required on server).
+build-prod-tools:
+	@mkdir -p bin
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/seed-prod ./cmd/seed-prod
+	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/backfill-crm ./cmd/backfill-crm
+
+PROD_SEED_CMD = $(if $(wildcard bin/seed-prod),./bin/seed-prod,go run ./cmd/seed-prod)
+BACKFILL_CRM_CMD = $(if $(wildcard bin/backfill-crm),./bin/backfill-crm,go run ./cmd/backfill-crm)
+
 run-binary:
 	./bin/rahil-api
 
@@ -126,13 +135,13 @@ seed-products:
 # Production bootstrap — admin account only (no demo customers/catalog).
 # Requires APP_ENV=production (or --allow-dev for local smoke tests).
 seed-prod:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed-prod
+	DATABASE_URL="$(DATABASE_URL)" $(PROD_SEED_CMD)
 
 seed-prod-password:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed-prod --update-password
+	DATABASE_URL="$(DATABASE_URL)" $(PROD_SEED_CMD) --update-password
 
 seed-backfill-crm:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/backfill-crm
+	DATABASE_URL="$(DATABASE_URL)" $(BACKFILL_CRM_CMD)
 
 fetch-catalog-images:
 	bash scripts/fetch-catalog-images.sh

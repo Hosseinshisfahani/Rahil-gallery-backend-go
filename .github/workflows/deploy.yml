@@ -27,6 +27,12 @@ jobs:
       - name: Build Docker image
         run: docker build --build-arg GIT_SHA=${{ github.sha }} -t rahil-gallery-api:${{ github.sha }} .
 
+      - name: Build production CLI tools
+        run: |
+          mkdir -p bin
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/seed-prod ./cmd/seed-prod
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/backfill-crm ./cmd/backfill-crm
+
       - name: Save image tarball
         run: docker save rahil-gallery-api:${{ github.sha }} | gzip > api-image.tar.gz
 
@@ -44,6 +50,8 @@ jobs:
         run: |
           tar -czf repo-sync.tar.gz \
             Makefile \
+            bin/seed-prod \
+            bin/backfill-crm \
             scripts/deploy-remote.sh \
             scripts/export-compose-env.sh \
             docker-compose.prod.yml \
@@ -54,7 +62,7 @@ jobs:
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-repo-sync.tar.gz"
           ssh -o StrictHostKeyChecking=yes \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "mkdir -p ${SERVER_DEPLOY_PATH}/scripts ${SERVER_DEPLOY_PATH}/migrations ${SERVER_DEPLOY_PATH}/deploy && tar -xzf /tmp/server-repo-sync.tar.gz -C ${SERVER_DEPLOY_PATH} && rm -f /tmp/server-repo-sync.tar.gz"
+            "mkdir -p ${SERVER_DEPLOY_PATH}/bin ${SERVER_DEPLOY_PATH}/scripts ${SERVER_DEPLOY_PATH}/migrations ${SERVER_DEPLOY_PATH}/deploy && tar -xzf /tmp/server-repo-sync.tar.gz -C ${SERVER_DEPLOY_PATH} && chmod +x ${SERVER_DEPLOY_PATH}/bin/seed-prod ${SERVER_DEPLOY_PATH}/bin/backfill-crm && rm -f /tmp/server-repo-sync.tar.gz"
         env:
           SERVER_DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}
 

@@ -24,6 +24,25 @@ See also: [docs/cicd-setup.md](./docs/cicd-setup.md) in the monorepo docs folder
 
 Production stack: `docker compose -f docker-compose.prod.yml up -d`
 
+## What CI deploys to the VPS
+
+CI does **not** run `git pull` on the server. Each deploy uploads:
+
+- Docker API image (built in GitHub Actions)
+- `migrations/`, compose files, deploy scripts, `Makefile`
+- Pre-built Linux binaries: `bin/seed-prod`, `bin/backfill-crm`
+
+The git checkout under `SERVER_DEPLOY_PATH` may be outdated — that is normal. Use `make seed-prod` / `make seed-backfill-crm` (they use `bin/*` when present), not `go run ./cmd/...`.
+
+To refresh the full repo for local development on the VPS:
+
+```bash
+cd /root/source/Rahil-Gallery-Server
+git stash push -u -m deploy-artifacts   # keep .env
+git pull origin master
+git stash pop || true
+```
+
 ## VPS without Docker Hub
 
 `make docker-up` **builds on the server** and needs `golang:1.22-alpine` from Docker Hub — it will fail with TLS timeout on blocked networks.
