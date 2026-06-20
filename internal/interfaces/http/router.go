@@ -5,7 +5,6 @@ import (
 	"log"
 	"os"
 
-	"github.com/ansrivas/fiberprometheus/v2"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
@@ -35,9 +34,7 @@ func NewApp(deps RouterDeps) *fiber.App {
 	app.Use(cors.New())
 
 	if deps.Config.MetricsEnabled {
-		prom := fiberprometheus.New("rahil_api")
-		prom.RegisterAt(app, "/metrics")
-		app.Use(prom.Middleware)
+		registerPrometheusMetrics(app, deps.Config)
 	}
 
 	if obsSvc != nil {

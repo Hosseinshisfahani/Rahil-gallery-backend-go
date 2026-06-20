@@ -23,6 +23,7 @@ type Config struct {
 	ObservabilityIngestKey     string
 	ObservabilityRetentionDays int
 	MetricsEnabled             bool
+	MetricsServiceName         string
 }
 
 func Load() (Config, error) {
@@ -68,6 +69,7 @@ func Load() (Config, error) {
 		ObservabilityIngestKey:     os.Getenv("OBSERVABILITY_INGEST_KEY"),
 		ObservabilityRetentionDays: retentionDays,
 		MetricsEnabled:             getEnv("METRICS_ENABLED", "true") != "false",
+		MetricsServiceName:         getEnv("METRICS_SERVICE_NAME", "rahil_api"),
 	}
 
 	return cfg, nil

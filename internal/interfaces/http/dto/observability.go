@@ -49,11 +49,6 @@ type ObservabilityEventResponse struct {
 	CreatedAt  string          `json:"createdAt"`
 }
 
-type PaginatedObservabilityResponse struct {
-	Data []ObservabilityEventResponse `json:"data"`
-	Meta PaginationMeta               `json:"meta"`
-}
-
 func ToObservabilityEvent(ev domain.Event) ObservabilityEventResponse {
 	return ObservabilityEventResponse{
 		ID:         ev.ID.String(),
@@ -68,31 +63,6 @@ func ToObservabilityEvent(ev domain.Event) ObservabilityEventResponse {
 		UserAgent:  ev.UserAgent,
 		Metadata:   ev.Metadata,
 		CreatedAt:  ev.CreatedAt.UTC().Format(time.RFC3339),
-	}
-}
-
-func ToPaginatedObservability(events []domain.Event, total, page, perPage int) PaginatedObservabilityResponse {
-	data := make([]ObservabilityEventResponse, 0, len(events))
-	for _, ev := range events {
-		data = append(data, ToObservabilityEvent(ev))
-	}
-	totalPages := total / perPage
-	if total%perPage != 0 {
-		totalPages++
-	}
-	if totalPages == 0 && total > 0 {
-		totalPages = 1
-	}
-	hasMore := page*perPage < total
-	return PaginatedObservabilityResponse{
-		Data: data,
-		Meta: PaginationMeta{
-			Page:       page,
-			PerPage:    perPage,
-			Total:      &total,
-			TotalPages: &totalPages,
-			HasMore:    &hasMore,
-		},
 	}
 }
 

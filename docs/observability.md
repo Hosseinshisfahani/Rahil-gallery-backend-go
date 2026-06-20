@@ -13,8 +13,6 @@ Application errors and client-side reports are stored in Postgres for **7 days**
 ### Endpoints
 
 - `POST /api/v1/observability/events` — ingest (Bearer JWT **or** ingest key)
-- `GET /api/v1/admin/observability/events` — staff list (filters: `source`, `level`, `route`, `page`, `perPage`)
-- `GET /api/v1/admin/observability/summary` — counts for the retention window
 - `GET /metrics` — Prometheus scrape target
 
 Apply migration:
@@ -42,11 +40,9 @@ ssh root@YOUR_SERVER 'gunzip -c /root/rahil-docker-images.tar.gz | docker load'
 
 Prometheus scrapes the API at `host.docker.internal:8080`. Ensure the API process listens on that port.
 
-## Admin UI
+## Client error reporting
 
-Staff can browse stored errors at **Admin → Errors** (`/admin/observability`).
-
-The Next.js admin app reports unhandled client errors when a session is active (or when `NEXT_PUBLIC_OBSERVABILITY_INGEST_KEY` is set).
+The Next.js admin app reports unhandled client errors when a session is active (or when `NEXT_PUBLIC_OBSERVABILITY_INGEST_KEY` is set). View errors in Grafana (**Rahil Gallery Errors** dashboard), not in the admin UI.
 
 ## Client env
 

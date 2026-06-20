@@ -3,11 +3,9 @@ package handler
 import (
 	"errors"
 	"strings"
-	"time"
 
 	"github.com/gofiber/fiber/v2"
 	appobs "github.com/rahil-gallery/rahil-gallery-server/internal/application/observability"
-	domain "github.com/rahil-gallery/rahil-gallery-server/internal/domain/observability"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/interfaces/http/dto"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/interfaces/http/response"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/pkg/tokens"
@@ -43,46 +41,6 @@ func (h *ObservabilityHandler) Ingest(c *fiber.Ctx) error {
 	}
 
 	return c.Status(fiber.StatusCreated).JSON(dto.ToObservabilityEvent(*ev))
-}
-
-func (h *ObservabilityHandler) List(c *fiber.Ctx) error {
-	filter := domain.ListFilter{
-		Source:  strings.TrimSpace(c.Query("source")),
-		Level:   strings.TrimSpace(c.Query("level")),
-		Route:   strings.TrimSpace(c.Query("route")),
-		Page:    queryInt(c, "page", 1),
-		PerPage: queryInt(c, "perPage", 25),
-	}
-
-	if fromStr := strings.TrimSpace(c.Query("from")); fromStr != "" {
-		t, err := time.Parse(time.RFC3339, fromStr)
-		if err != nil {
-			return observabilityBadRequest(c, "VALIDATION_ERROR", "invalid from timestamp (use RFC3339)")
-		}
-		filter.From = &t
-	}
-	if toStr := strings.TrimSpace(c.Query("to")); toStr != "" {
-		t, err := time.Parse(time.RFC3339, toStr)
-		if err != nil {
-			return observabilityBadRequest(c, "VALIDATION_ERROR", "invalid to timestamp (use RFC3339)")
-		}
-		filter.To = &t
-	}
-
-	events, total, err := h.svc.List(c.Context(), filter)
-	if err != nil {
-		return mapObservabilityError(c, err)
-	}
-
-	return c.JSON(dto.ToPaginatedObservability(events, total, filter.Page, filter.PerPage))
-}
-
-func (h *ObservabilityHandler) Summary(c *fiber.Ctx) error {
-	summary, err := h.svc.Summary(c.Context())
-	if err != nil {
-		return mapObservabilityError(c, err)
-	}
-	return c.JSON(summary)
 }
 
 func (h *ObservabilityHandler) authorizeIngest(c *fiber.Ctx) bool {

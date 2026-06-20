@@ -1,9 +1,33 @@
 global:
   scrape_interval: 15s
+  scrape_timeout: 10s
   evaluation_interval: 15s
+  external_labels:
+    project: rahil-gallery
+    environment: local
+
+rule_files:
+  - /etc/prometheus/rules/recording-rules.yml
 
 scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets: ["127.0.0.1:9090"]
+        labels:
+          component: prometheus
+
   - job_name: rahil-api
     metrics_path: /metrics
+    scrape_interval: 15s
+    scrape_timeout: 10s
+    honor_labels: true
     static_configs:
       - targets: ["127.0.0.1:8080"]
+        labels:
+          component: api
+          service: rahil_api
+    metric_relabel_configs:
+      # Drop high-cardinality static asset paths from stored metrics.
+      - source_labels: [path]
+        regex: "/static/.*"
+        action: drop

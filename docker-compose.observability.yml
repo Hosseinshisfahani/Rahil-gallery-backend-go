@@ -3,8 +3,16 @@ services:
     image: prom/prometheus:v2.55.1
     restart: unless-stopped
     network_mode: host
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+      - --web.enable-admin-api
     volumes:
       - ./deploy/observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./deploy/observability/prometheus:/etc/prometheus/rules:ro
+      - prometheus_data:/prometheus
 
   grafana:
     image: grafana/grafana:11.4.0
@@ -15,6 +23,7 @@ services:
       GF_SECURITY_ADMIN_USER: admin
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/provisioning/dashboards/json/rahil-api.json
     volumes:
       - ./deploy/observability/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
@@ -24,6 +33,9 @@ services:
     networks:
       - default
       - rahil-gallery-server_default
+
+volumes:
+  prometheus_data:
 
 networks:
   rahil-gallery-server_default:
