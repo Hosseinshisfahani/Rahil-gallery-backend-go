@@ -11,6 +11,8 @@ import (
 
 func TestToCustomerSummary_includesCRMFields(t *testing.T) {
 	customerType := "vip"
+	ageRange := "21-40"
+	gender := "female"
 	row := domain.ListRow{
 		ID:                  uuid.MustParse("11111111-1111-4111-8111-111111111111"),
 		FullName:            "Sara Mohammadi",
@@ -20,6 +22,8 @@ func TestToCustomerSummary_includesCRMFields(t *testing.T) {
 		Status:              "active",
 		CustomerType:        &customerType,
 		PurchasedCategories: []string{"gold_and_gemstones", "silver_and_stones"},
+		CustomerAgeRange:    &ageRange,
+		Gender:              &gender,
 	}
 
 	resp := ToCustomerSummary(row)
@@ -28,6 +32,12 @@ func TestToCustomerSummary_includesCRMFields(t *testing.T) {
 	}
 	if len(resp.PurchasedCategories) != 2 {
 		t.Fatalf("purchasedCategories = %#v", resp.PurchasedCategories)
+	}
+	if resp.CustomerAgeRange == nil || *resp.CustomerAgeRange != "21-40" {
+		t.Fatalf("customerAgeRange = %#v", resp.CustomerAgeRange)
+	}
+	if resp.Gender == nil || *resp.Gender != "female" {
+		t.Fatalf("gender = %#v", resp.Gender)
 	}
 
 	b, err := json.Marshal(resp)
@@ -51,6 +61,8 @@ func TestEnrichListRowCRMFromImportProfile(t *testing.T) {
 	row := domain.ListRow{}
 	profile := json.RawMessage(`{
 		"customerType": "public",
+		"customerAgeRange": "14-21",
+		"gender": "male",
 		"purchasedCategories": ["gold_and_stones"]
 	}`)
 
@@ -58,6 +70,12 @@ func TestEnrichListRowCRMFromImportProfile(t *testing.T) {
 
 	if row.CustomerType == nil || *row.CustomerType != "public" {
 		t.Fatalf("customerType = %#v", row.CustomerType)
+	}
+	if row.CustomerAgeRange == nil || *row.CustomerAgeRange != "14-21" {
+		t.Fatalf("customerAgeRange = %#v", row.CustomerAgeRange)
+	}
+	if row.Gender == nil || *row.Gender != "male" {
+		t.Fatalf("gender = %#v", row.Gender)
 	}
 	if len(row.PurchasedCategories) != 1 || row.PurchasedCategories[0] != "gold_and_stones" {
 		t.Fatalf("purchasedCategories = %#v", row.PurchasedCategories)

@@ -154,7 +154,9 @@ SELECT
   COALESCE(cp.is_vip, FALSE),
   COALESCE(cp.tags, '{}'),
   ` + crmCustomerTypeExpr + `,
-  ` + crmPurchasedCategoriesExpr + `
+  ` + crmPurchasedCategoriesExpr + `,
+  ` + crmAgeRangeExpr + `,
+  ` + crmGenderExpr + `
 %s %s
 ORDER BY u.created_at DESC
 LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.args)+1, len(q.args)+2)
@@ -175,12 +177,14 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 		var tags []string
 		var customerType *string
 		var purchasedCategories []string
+		var customerAgeRange, gender *string
 		if err := rows.Scan(
 			&row.ID, &row.FullName, &row.Phone, &email,
 			&row.RegisteredAt, &lastActivity, &lastPurchase,
 			&row.TotalOrders, &row.TotalLTV,
 			&row.Segment, &row.Status, &row.IsVIP, &tags,
 			&customerType, &purchasedCategories,
+			&customerAgeRange, &gender,
 		); err != nil {
 			return nil, err
 		}
@@ -190,6 +194,8 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 		row.Tags = tags
 		row.CustomerType = customerType
 		row.PurchasedCategories = purchasedCategories
+		row.CustomerAgeRange = customerAgeRange
+		row.Gender = gender
 		domain.NormalizeListRowCRM(&row)
 		items = append(items, row)
 	}

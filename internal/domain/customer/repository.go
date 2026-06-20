@@ -45,6 +45,7 @@ type ImportProfileInput struct {
 	FirstVisitDate      *string  `json:"firstVisitDate,omitempty"`
 	CustomerType        string   `json:"customerType"`
 	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
+	Gender              *string  `json:"gender,omitempty"`
 	PurchasedCategories []string `json:"purchasedCategories"`
 	Description         *string  `json:"description,omitempty"`
 	Signature           *string  `json:"signature,omitempty"`

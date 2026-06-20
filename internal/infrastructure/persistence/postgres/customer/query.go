@@ -22,6 +22,10 @@ const crmPurchasedCategoriesExpr = `COALESCE(
   ARRAY['gold_and_stones']::text[]
 )`
 
+const crmAgeRangeExpr = `NULLIF(COALESCE(cp.crm_age_range, cp.import_profile->>'customerAgeRange'), '')`
+
+const crmGenderExpr = `NULLIF(COALESCE(cp.crm_gender, cp.import_profile->>'gender'), '')`
+
 const listBaseFrom = `
 FROM users u
 INNER JOIN roles r ON r.id = u.role_id AND r.name = $1

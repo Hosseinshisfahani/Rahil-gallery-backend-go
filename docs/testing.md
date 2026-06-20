@@ -56,7 +56,7 @@ make test
 
 ## Dev database seed
 
-Populates staff users, customers (CRM profiles), catalog products, orders, and wishlist items for local admin UI testing. Default scale: **10,000 customers** (8 fixed fixtures + bulk generated rows). Supports **8–100,000** via `--customers`.
+Populates staff users, customers (CRM profiles with age group and gender), catalog products, orders, and wishlist items for local admin UI testing. Default scale: **10,000 customers** (8 fixed fixtures + bulk generated rows). Supports **8–100,000** via `--customers`.
 
 ```bash
 make docker-dev && make migrate-up

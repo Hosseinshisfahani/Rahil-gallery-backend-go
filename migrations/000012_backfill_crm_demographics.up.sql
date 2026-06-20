@@ -1,16 +1,6 @@
-package seed
+-- Backfill missing CRM demographics on existing customer import profiles.
+-- Generated crm_age_range / crm_gender columns update automatically.
 
-import (
-	"context"
-	"log"
-)
-
-// backfillMissingCRMProfiles ensures every customer profile has customerType,
-// purchasedCategories, customerAgeRange, and gender in import_profile
-// (generated crm_* columns follow automatically).
-func (r *Runner) backfillMissingCRMProfiles(ctx context.Context) error {
-	log.Println("seed: backfilling missing CRM profile fields...")
-	const q = `
 UPDATE customer_profiles cp
 SET import_profile = COALESCE(cp.import_profile, '{}'::jsonb)
   || jsonb_build_object(
@@ -48,13 +38,4 @@ WHERE cp.import_profile IS NULL
    OR (
      NULLIF(cp.import_profile->>'gender', '') IS NULL
      AND abs(hashtext(cp.user_id::text || ':gender')) % 7 <> 0
-   )`
-	tag, err := r.pool.Exec(ctx, q)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() > 0 {
-		log.Printf("seed:   backfilled CRM fields on %d profiles", tag.RowsAffected())
-	}
-	return nil
-}
+   );

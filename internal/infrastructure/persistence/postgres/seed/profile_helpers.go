@@ -57,20 +57,26 @@ func fixtureImportProfile(
 	email *string,
 	customerType string,
 	categories []string,
+	ageRange, gender string,
 	now time.Time,
 	registeredDaysAgo int,
 ) (string, error) {
+	if ageRange == "" {
+		ageRange = "21-40"
+	}
 	p := seedImportProfile{
 		FirstName:           first,
 		LastName:            last,
 		Phone:               phone,
 		CustomerType:        customerType,
-		CustomerAgeRange:    "21-40",
-		Gender:              "female",
+		CustomerAgeRange:    ageRange,
 		PurchasedCategories: categories,
 		FirstVisitDate:      now.AddDate(0, 0, -registeredDaysAgo+14).Format("2006-01-02"),
 		Birthday:            "1990-05-12",
 		Description:         fmt.Sprintf("%s %s — fixture CRM profile", first, last),
+	}
+	if gender != "" {
+		p.Gender = gender
 	}
 	if email != nil {
 		p.Email = *email

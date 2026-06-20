@@ -38,6 +38,8 @@ type CustomerSummaryResponse struct {
 	Tags                []string `json:"tags"`
 	CustomerType        string   `json:"customerType"`
 	PurchasedCategories []string `json:"purchasedCategories"`
+	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
+	Gender              *string  `json:"gender,omitempty"`
 	Country             string   `json:"country"`
 	Href             string   `json:"href"`
 }
@@ -172,6 +174,8 @@ func ToCustomerSummary(row domain.ListRow) CustomerSummaryResponse {
 		Tags:                row.Tags,
 		CustomerType:        *row.CustomerType,
 		PurchasedCategories: row.PurchasedCategories,
+		CustomerAgeRange:    row.CustomerAgeRange,
+		Gender:              row.Gender,
 		Country:             "IR",
 		Href:                "/admin/customers/" + id,
 	}
@@ -239,6 +243,8 @@ func enrichListRowCRMFromImportProfile(row *domain.ListRow, importProfile json.R
 	}
 	var profile struct {
 		CustomerType        string   `json:"customerType"`
+		CustomerAgeRange    string   `json:"customerAgeRange"`
+		Gender              string   `json:"gender"`
 		PurchasedCategories []string `json:"purchasedCategories"`
 	}
 	if err := json.Unmarshal(importProfile, &profile); err != nil {
@@ -247,6 +253,14 @@ func enrichListRowCRMFromImportProfile(row *domain.ListRow, importProfile json.R
 	if (row.CustomerType == nil || *row.CustomerType == "") && profile.CustomerType != "" {
 		ct := profile.CustomerType
 		row.CustomerType = &ct
+	}
+	if row.CustomerAgeRange == nil && profile.CustomerAgeRange != "" {
+		ar := profile.CustomerAgeRange
+		row.CustomerAgeRange = &ar
+	}
+	if row.Gender == nil && profile.Gender != "" {
+		g := profile.Gender
+		row.Gender = &g
 	}
 	if len(row.PurchasedCategories) == 0 && len(profile.PurchasedCategories) > 0 {
 		row.PurchasedCategories = profile.PurchasedCategories

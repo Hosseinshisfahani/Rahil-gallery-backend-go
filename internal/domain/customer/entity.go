@@ -133,6 +133,8 @@ type ListRow struct {
 	Tags             []string
 	CustomerType     *string
 	PurchasedCategories []string
+	CustomerAgeRange *string
+	Gender           *string
 }
 
 type Detail struct {

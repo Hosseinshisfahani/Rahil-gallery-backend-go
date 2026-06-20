@@ -26,7 +26,7 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 		FirstName: "Maryam", LastName: "Karimi", Phone: "+989211334455",
 		Email: "maryam.k@example.com", Job: "Architect", Address: "Tehran, Vanak",
 		Birthday: "1990-05-12", MarriageDate: "2018-03-20", FirstVisitDate: "2024-10-15",
-		CustomerType: "vip", CustomerAgeRange: "21-40",
+		CustomerType: "vip", CustomerAgeRange: "21-40", Gender: "female",
 		PurchasedCategories: []string{"gold_and_gemstones", "silver_and_stones"},
 		Description: "Visited for bridal consultation", Signature: "M. Karimi",
 	}
@@ -43,6 +43,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			isVIP: true, vipSource: &manual, importMode: &history,
 			customerType: "vip",
 			purchasedCategories: []string{"gold_and_gemstones", "silver_and_stones"},
+			customerAgeRange: "21-40",
+			gender: "female",
 			tags: []string{"VIP", "High spender", "Bridal customer"},
 			lastActivityDaysAgo: 1, registeredDaysAgo: 450,
 		},
@@ -52,6 +54,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			status: "active", locale: "fa", importMode: &history,
 			customerType: "public",
 			purchasedCategories: []string{"gold_and_stones"},
+			customerAgeRange: "14-21",
+			gender: "male",
 			tags: []string{"High spender"},
 			lastActivityDaysAgo: 0, registeredDaysAgo: 520,
 		},
@@ -60,6 +64,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			phone: "+989211223344", status: "active", locale: "fa", importMode: &history,
 			customerType: "colleagues",
 			purchasedCategories: []string{"silver_and_gemstones"},
+			customerAgeRange: "21-40",
+			gender: "female",
 			tags: []string{"Bridal customer"}, lastActivityDaysAgo: 3, registeredDaysAgo: 900,
 		},
 		{
@@ -67,6 +73,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			phone: "+989121998877", status: "banned", locale: "fa", importMode: &history,
 			customerType: "family_and_friends",
 			purchasedCategories: []string{"stones_and_roughs"},
+			customerAgeRange: "40+",
+			gender: "male",
 			tags: []string{"At-risk"}, blockReason: &blockReason, blockNote: &blockNote,
 			lastActivityDaysAgo: 120, registeredDaysAgo: 300,
 		},
@@ -83,6 +91,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			phone: "+989331445566", status: "active", locale: "en", importMode: &history,
 			customerType: "foreign_and_tour_guidance",
 			purchasedCategories: []string{"gold_and_gemstones", "gemstones_and_special_roughs"},
+			customerAgeRange: "40+",
+			gender: "male",
 			lastActivityDaysAgo: 100, registeredDaysAgo: 100,
 		},
 		{
@@ -91,6 +101,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			status: "active", locale: "fa", ringSize: &ring14, importMode: &history,
 			customerType: "public",
 			purchasedCategories: []string{"silver_and_stones"},
+			customerAgeRange: "21-40",
+			gender: "female",
 			tags: []string{"Influencer lead"}, lastActivityDaysAgo: 7, registeredDaysAgo: 60,
 		},
 		{
@@ -98,6 +110,8 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			phone: "+989191887766", status: "active", locale: "fa", importMode: &history,
 			customerType: "colleagues",
 			purchasedCategories: []string{"gold_and_stones", "silver_and_gemstones"},
+			customerAgeRange: "14-21",
+			gender: "male",
 			lastActivityDaysAgo: 2, registeredDaysAgo: 30,
 		},
 	}
@@ -115,6 +129,7 @@ func (r *Runner) seedFixtureCustomers(ctx context.Context, tx pgx.Tx, roles role
 			profileJSON, err := fixtureImportProfile(
 				c.first, c.last, c.phone, c.email,
 				c.customerType, c.purchasedCategories,
+				c.customerAgeRange, c.gender,
 				now, c.registeredDaysAgo,
 			)
 			if err != nil {
@@ -281,6 +296,8 @@ type customerSeed struct {
 	importProfile          *string
 	customerType           string
 	purchasedCategories    []string
+	customerAgeRange       string
+	gender                 string
 	tags                   []string
 	blockReason            *string
 	blockNote              *string
