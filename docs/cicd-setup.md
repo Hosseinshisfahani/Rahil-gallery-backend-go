@@ -26,22 +26,20 @@ Production stack: `docker compose -f docker-compose.prod.yml up -d`
 
 ## What CI deploys to the VPS
 
-CI does **not** run `git pull` on the server. Each deploy uploads:
+Each deploy syncs the **full tracked source tree** at the deployed commit (via `git archive` + `rsync`), then loads the API Docker image:
 
-- Docker API image (built in GitHub Actions)
-- `migrations/`, compose files, deploy scripts, `Makefile`
+- All Go source: `cmd/`, `internal/`, `migrations/`, `scripts/`, compose files, `Makefile`, `docs/`, etc.
 - Pre-built Linux binaries: `bin/seed-prod`, `bin/backfill-crm`
+- `.deploy-sha` — commit SHA written during sync (check with `cat .deploy-sha`)
 
-The git checkout under `SERVER_DEPLOY_PATH` may be outdated — that is normal. Use `make seed-prod` / `make seed-backfill-crm` (they use `bin/*` when present), not `go run ./cmd/...`.
+Preserved on the server (never overwritten by CI):
 
-To refresh the full repo for local development on the VPS:
+- `.env`
+- `data/` (catalog images, customer signatures)
 
-```bash
-cd /root/source/Rahil-Gallery-Server
-git stash push -u -m deploy-artifacts   # keep .env
-git pull origin master
-git stash pop || true
-```
+CI does **not** run `git pull` on the server — the checkout may be stale until the next deploy syncs it. After deploy, `cat .deploy-sha` should match the latest GitHub commit.
+
+Runtime API code runs from the **Docker image**, not `go run`. The synced source is for migrations, Make targets, seeders, and debugging.
 
 ## VPS without Docker Hub
 

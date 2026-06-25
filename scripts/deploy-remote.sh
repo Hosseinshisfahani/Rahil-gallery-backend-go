@@ -144,4 +144,8 @@ docker images rahil-gallery-api --format '{{.ID}} {{.Tag}}' \
   | xargs -r docker rmi -f 2>/dev/null || true
 
 rm -f "${IMAGE_TAR}"
-echo "==> Deploy complete (${GIT_SHA})"
+if [[ -f .deploy-sha ]]; then
+  echo "==> Deploy complete (source + image at $(cat .deploy-sha))"
+else
+  echo "==> Deploy complete (${GIT_SHA})"
+fi

@@ -46,23 +46,25 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H "${{ secrets.SSH_HOST }}" >> ~/.ssh/known_hosts
 
-      - name: Sync deploy scripts on server
+      - name: Sync server source on VPS
         run: |
-          tar -czf repo-sync.tar.gz \
-            Makefile \
-            bin/seed-prod \
-            bin/backfill-crm \
-            scripts/deploy-remote.sh \
-            scripts/export-compose-env.sh \
-            docker-compose.prod.yml \
-            docker-compose.observability.yml \
-            deploy/observability \
-            migrations
-          scp -o StrictHostKeyChecking=yes repo-sync.tar.gz \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-repo-sync.tar.gz"
+          GITHUB_SHA=${{ github.sha }} bash scripts/package-server-source.sh server-source.tar.gz
+          scp -o StrictHostKeyChecking=yes server-source.tar.gz \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/server-source.tar.gz"
           ssh -o StrictHostKeyChecking=yes \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "mkdir -p ${SERVER_DEPLOY_PATH}/bin ${SERVER_DEPLOY_PATH}/scripts ${SERVER_DEPLOY_PATH}/migrations ${SERVER_DEPLOY_PATH}/deploy && tar -xzf /tmp/server-repo-sync.tar.gz -C ${SERVER_DEPLOY_PATH} && chmod +x ${SERVER_DEPLOY_PATH}/bin/seed-prod ${SERVER_DEPLOY_PATH}/bin/backfill-crm && rm -f /tmp/server-repo-sync.tar.gz"
+            "set -euo pipefail
+             STAGING=\$(mktemp -d)
+             trap 'rm -rf \"\$STAGING\"' EXIT
+             tar -xzf /tmp/server-source.tar.gz -C \"\$STAGING\"
+             mkdir -p \"${SERVER_DEPLOY_PATH}\"
+             rsync -a --delete \
+               --exclude '.env' \
+               --exclude 'data/' \
+               \"\$STAGING/\" \"${SERVER_DEPLOY_PATH}/\"
+             chmod +x \"${SERVER_DEPLOY_PATH}/bin/seed-prod\" \"${SERVER_DEPLOY_PATH}/bin/backfill-crm\" 2>/dev/null || true
+             rm -f /tmp/server-source.tar.gz
+             echo \"==> Server source synced to ${SERVER_DEPLOY_PATH} (\$(cat \"${SERVER_DEPLOY_PATH}/.deploy-sha\" 2>/dev/null || echo unknown))\""
         env:
           SERVER_DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}
 
