@@ -37,6 +37,27 @@ load_env() {
   set +a
 }
 
+database_url_component() {
+  local component="$1"
+  local url="$2"
+  python3 - "${component}" "${url}" <<'PY'
+import sys
+from urllib.parse import unquote, urlparse
+
+component = sys.argv[1]
+parsed = urlparse(sys.argv[2])
+
+if component == "username":
+    print(unquote(parsed.username or ""))
+elif component == "password":
+    print(unquote(parsed.password or ""))
+elif component == "database":
+    print(unquote((parsed.path or "/").lstrip("/")))
+else:
+    raise SystemExit(f"unknown component: {component}")
+PY
+}
+
 # Migrate/API use host `db` inside Compose. Always derive from DATABASE_URL when set
 # so a stale DATABASE_URL_DOCKER in .env cannot break deploy.
 prepare_database_url_docker() {
@@ -44,16 +65,66 @@ prepare_database_url_docker() {
     export DATABASE_URL_DOCKER="$(
       printf '%s' "$DATABASE_URL" | sed -E 's/(postgres(ql)?:\/\/[^@]+@)[^:/]+/\1db/'
     )"
+    export POSTGRES_PASSWORD="$(database_url_component password "${DATABASE_URL}")"
     echo "==> Using DATABASE_URL_DOCKER derived from DATABASE_URL"
+    echo "==> Using POSTGRES_PASSWORD derived from DATABASE_URL"
     return
   fi
   if [[ -n "${DATABASE_URL_DOCKER:-}" ]]; then
     export DATABASE_URL_DOCKER
+    export POSTGRES_PASSWORD="${POSTGRES_PASSWORD:-$(database_url_component password "${DATABASE_URL_DOCKER}")}"
     echo "==> Using DATABASE_URL_DOCKER from .env"
+    echo "==> Using POSTGRES_PASSWORD derived from DATABASE_URL_DOCKER"
     return
   fi
   echo "ERROR: set DATABASE_URL (recommended) or DATABASE_URL_DOCKER in .env" >&2
   exit 1
+}
+
+validate_postgres_credentials() {
+  local source_url="${DATABASE_URL:-${DATABASE_URL_DOCKER:-}}"
+  local db_user db_password db_name db_network
+
+  if [[ -z "${source_url}" ]]; then
+    echo "ERROR: database URL is required before validating Postgres connectivity" >&2
+    exit 1
+  fi
+
+  db_user="$(database_url_component username "${source_url}")"
+  db_password="$(database_url_component password "${source_url}")"
+  db_name="$(database_url_component database "${source_url}")"
+
+  if [[ -z "${db_user}" || -z "${db_password}" || -z "${db_name}" ]]; then
+    echo "ERROR: database URL must include username, password, and database name" >&2
+    exit 1
+  fi
+
+  db_network="$(
+    docker inspect rahil-gallery-db \
+      --format '{{range $name, $_ := .NetworkSettings.Networks}}{{println $name}}{{end}}' \
+      | awk 'NF {print; exit}'
+  )"
+
+  if [[ -z "${db_network}" ]]; then
+    echo "ERROR: could not determine Docker network for rahil-gallery-db" >&2
+    exit 1
+  fi
+
+  echo "==> Validating Postgres credentials from Docker network"
+  if ! docker run --rm \
+    --network "${db_network}" \
+    -e "PGPASSWORD=${db_password}" \
+    "${POSTGRES_IMAGE}" \
+    psql -v ON_ERROR_STOP=1 -h db -U "${db_user}" -d "${db_name}" -c 'select 1' >/dev/null; then
+    cat >&2 <<'MSG'
+ERROR: Postgres rejected the credentials derived from .env DATABASE_URL.
+
+Fix the server .env so DATABASE_URL matches the existing Postgres role password,
+or rotate the Postgres role password as a one-time operational step. The deploy
+will not rewrite database credentials automatically.
+MSG
+    exit 1
+  fi
 }
 
 load_env
@@ -92,6 +163,8 @@ require_image "${MIGRATE_IMAGE}" \
 
 echo "==> Ensuring database is up"
 "${COMPOSE[@]}" up -d db
+
+validate_postgres_credentials
 
 echo "==> Running migrations"
 "${COMPOSE[@]}" up migrate --abort-on-container-exit

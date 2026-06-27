@@ -1,5 +1,5 @@
 # Production stack — API uses a pre-built image loaded on the server (CI/CD).
-# Usage: API_IMAGE=rahil-gallery-api:latest docker compose -f docker-compose.prod.yml up -d
+# Usage: eval "$(bash scripts/export-compose-env.sh)" && docker compose -f docker-compose.prod.yml up -d
 #
 # Set DATABASE_URL in .env — deploy and make docker-prod-* derive DATABASE_URL_DOCKER (host `db`) automatically.
 # Do not set DATABASE_URL_DOCKER unless DATABASE_URL is unset; a wrong value breaks migrations.
@@ -9,14 +9,14 @@ services:
     container_name: rahil-gallery-db
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required. Run scripts/export-compose-env.sh before docker compose}
       POSTGRES_DB: ${POSTGRES_DB:-rahil_gallery}
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_BIND_ADDRESS:-127.0.0.1}:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d rahil_gallery"]
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-postgres}\" -d \"$${POSTGRES_DB:-rahil_gallery}\""]
       interval: 5s
       timeout: 5s
       retries: 10

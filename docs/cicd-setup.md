@@ -22,7 +22,14 @@ See also: [docs/cicd-setup.md](./docs/cicd-setup.md) in the monorepo docs folder
 2. Create `.env` from `.env.example` (set `JWT_ACCESS_SECRET`)  
 3. Add deploy public key to `authorized_keys`
 
-Production stack: `docker compose -f docker-compose.prod.yml up -d`
+Production stack: `make docker-prod-up`
+
+If you run compose manually, first export derived production env:
+
+```bash
+eval "$(bash scripts/export-compose-env.sh)"
+docker compose -f docker-compose.prod.yml up -d
+```
 
 ## What CI deploys to the VPS
 
@@ -40,6 +47,15 @@ Preserved on the server (never overwritten by CI):
 CI does **not** run `git pull` on the server — the checkout may be stale until the next deploy syncs it. After deploy, `cat .deploy-sha` should match the latest GitHub commit.
 
 Runtime API code runs from the **Docker image**, not `go run`. The synced source is for migrations, Make targets, seeders, and debugging.
+
+During deploy, `scripts/deploy-remote.sh` also validates database credentials:
+
+- `DATABASE_URL_DOCKER` is always derived from `.env` `DATABASE_URL` when present.
+- `POSTGRES_PASSWORD` is derived from `DATABASE_URL` before `db` starts, so fresh volumes initialize with the same password the API will use.
+- After `db` is up, deploy tests the `DATABASE_URL` credentials from the same Docker network path used by migrations and the API.
+- If Postgres rejects those credentials, deploy fails before migrations/API restart. It does **not** rewrite database role passwords automatically.
+
+If deploy fails with `Postgres rejected the credentials derived from .env DATABASE_URL`, fix the VPS `.env` so `DATABASE_URL` matches the existing database role password, or rotate the role password as a one-time operational action.
 
 ## VPS without Docker Hub
 
