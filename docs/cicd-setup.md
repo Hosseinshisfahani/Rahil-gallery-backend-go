@@ -6,8 +6,9 @@ See also: [docs/cicd-setup.md](./docs/cicd-setup.md) in the monorepo docs folder
 
 | File | Trigger | Action |
 |------|---------|--------|
-| `.github/workflows/ci.yml` | push / PR | Unit tests + Docker build |
-| `.github/workflows/deploy.yml` | push to `master` | Build image → SCP to VPS → `scripts/deploy-remote.sh` |
+| `.github/workflows/ci-cd.yml` | push / PR / manual | CI on every run; deploy to VPS only after CI passes on `master` |
+
+Deploy includes API health check and optional chained client deploy via `REPO_DISPATCH_TOKEN`.
 
 ## Required GitHub secrets
 
@@ -15,6 +16,7 @@ See also: [docs/cicd-setup.md](./docs/cicd-setup.md) in the monorepo docs folder
 - `SSH_HOST` — e.g. `46.249.101.208`
 - `SSH_USER` — e.g. `root`
 - `SERVER_DEPLOY_PATH` — e.g. `/root/source/Rahil-Gallery-Server`
+- `REPO_DISPATCH_TOKEN` — (optional) GitHub PAT with `repo` scope to auto-deploy the client after API deploy
 
 ## First-time VPS
 

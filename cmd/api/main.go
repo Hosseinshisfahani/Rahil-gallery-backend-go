@@ -19,9 +19,6 @@ func main() {
 	if err != nil {
 		log.Fatalf("config: %v", err)
 	}
-	if os.Getenv("JWT_ACCESS_SECRET") == "" {
-		log.Println("warning: JWT_ACCESS_SECRET not set; using insecure development default")
-	}
 
 	ctx := context.Background()
 	var pool = connectDatabase(ctx, cfg.DatabaseURL)

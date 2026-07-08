@@ -97,10 +97,18 @@ done
 set_github_secret "Rahil-Gallery-Server" "SERVER_DEPLOY_PATH" "${SERVER_PATH}"
 set_github_secret "Rahil-Gallery-Client" "CLIENT_DEPLOY_PATH" "${CLIENT_PATH}"
 
+if [[ -n "${REPO_DISPATCH_TOKEN:-}" ]]; then
+  set_github_secret "Rahil-Gallery-Server" "REPO_DISPATCH_TOKEN" "${REPO_DISPATCH_TOKEN}"
+else
+  echo "  skip REPO_DISPATCH_TOKEN (set REPO_DISPATCH_TOKEN env to chain API -> client deploy)"
+fi
+
 echo
 echo "Done. CI/CD secrets are configured."
 echo "Add the deploy public key to the VPS if you have not already."
 echo "One-time on VPS (blocked Docker Hub): bash scripts/bundle-docker-images.sh locally,"
 echo "  scp /tmp/rahil-docker-images.tar.gz to the server, then: gunzip -c ... | docker load"
 echo "Set GRAFANA_ADMIN_PASSWORD in ${SERVER_PATH}/.env on the VPS."
-echo "Then push to master — GitHub Actions will deploy API + Prometheus + Grafana automatically."
+echo "Optional: export REPO_DISPATCH_TOKEN=<PAT with repo scope> before running this script"
+echo "  to auto-deploy the client after every successful API deploy."
+echo "Then push to master — GitHub Actions CI/CD will deploy API (+ client when chained)."
