@@ -31,7 +31,7 @@ func Load() (Config, error) {
 		log.Printf("warning: loading .env: %v", err)
 	}
 
-	port, err := strconv.Atoi(getEnv("APP_PORT", "8080"))
+	port, err := strconv.Atoi(getEnv("APP_PORT", "8081"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid APP_PORT: %w", err)
 	}

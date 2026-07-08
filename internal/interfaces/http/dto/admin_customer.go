@@ -27,6 +27,7 @@ type CustomerSummaryResponse struct {
 	ID               string   `json:"id"`
 	FullName         string   `json:"fullName"`
 	Phone            string   `json:"phone"`
+	ImportProfile    json.RawMessage `json:"importProfile,omitempty"`
 	RegisteredAt     string   `json:"registeredAt"`
 	LastActivityAt   string   `json:"lastActivityAt"`
 	LastPurchaseDate *string  `json:"lastPurchaseDate,omitempty"`
@@ -164,6 +165,7 @@ func ToCustomerSummary(row domain.ListRow) CustomerSummaryResponse {
 		ID:                  id,
 		FullName:            row.FullName,
 		Phone:               row.Phone,
+		ImportProfile:       row.ImportProfile,
 		RegisteredAt:        formatDate(row.RegisteredAt),
 		LastActivityAt:      formatDatePtr(row.LastActivityAt, row.RegisteredAt),
 		TotalOrders:         row.TotalOrders,

@@ -27,6 +27,9 @@ jobs:
       - name: Feature tests
         run: go test ./tests/feature/... -count=1
 
+      - name: BDD tests
+        run: go test ./tests/bdd/... -count=1
+
       - name: Build API binary
         run: go build -o /dev/null ./cmd/api
 

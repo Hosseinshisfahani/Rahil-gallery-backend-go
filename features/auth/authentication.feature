@@ -59,3 +59,7 @@ Feature: Customer authentication
   Scenario: Profile requires authentication
     When I request my profile without a token
     Then the response status should be 401
+
+  Scenario: Login endpoint rejects unknown credentials
+    When I login with email "unknown@example.com" and password "Secret12"
+    Then the response status should be 401

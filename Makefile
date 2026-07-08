@@ -1,6 +1,9 @@
 MIGRATIONS_PATH ?= migrations
 MIGRATE_IMAGE ?= migrate/migrate:v4.18.1
-DATABASE_URL ?= postgres://postgres:postgres@127.0.0.1:5432/rahil_gallery?sslmode=disable
+POSTGRES_PORT ?= 5433
+APP_PORT ?= 8081
+DATABASE_URL ?= postgres://postgres:postgres@127.0.0.1:$(POSTGRES_PORT)/rahil_gallery?sslmode=disable
+export POSTGRES_PORT APP_PORT
 # Used when Postgres runs in Docker Compose (service name: db)
 MIGRATE_DATABASE_DOCKER ?= postgres://postgres:postgres@db:5432/rahil_gallery?sslmode=disable
 # VPS: proxy.golang.org is often blocked — use goproxy.io or vendor/offline binary instead.
@@ -11,12 +14,23 @@ export GOPROXY
 	migrate-up migrate-down migrate-create migrate-up-local \
 	seed seed-reset seed-small seed-products seed-prod seed-prod-password seed-backfill-crm fetch-catalog-images \
 	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-prod-migrate docker-prod-api docker-observability-up docker-logs docker-migrate \
-	run dev run-vendor build-linux run-binary
+	run dev dev-check run-docker stop-api run-vendor build-linux run-binary
 
-# Local API on :8080 (requires: make docker-dev, .env with DATABASE_URL)
-# On blocked VPS: try `make run-vendor` after `make vendor`, or use `make run-binary`.
-run dev:
-	go run ./cmd/api
+# Local API on :8081 by default (requires: make docker-dev)
+dev-check:
+	bash scripts/check-dev-db.sh
+
+dev: dev-check
+	bash scripts/run-api-dev.sh run
+
+run:
+	bash scripts/run-api-dev.sh run
+
+run-docker:
+	bash scripts/run-api-dev.sh start
+
+stop-api:
+	bash scripts/run-api-dev.sh stop
 
 run-vendor:
 	go run -mod=vendor ./cmd/api
@@ -114,23 +128,24 @@ else
 		create -ext sql -dir /migrations -seq $(NAME)
 endif
 
-# Dev fake data (requires: migrations applied, Postgres on localhost:5432)
+# Dev fake data (requires: make docker-dev, migrations applied)
+# Uses scripts/run-seed.sh → Compose network db:5432 (host :5432 publish can hang on some Docker setups).
 # SEED_CUSTOMERS: 8 (fixtures only) … 100000 (default 10000)
 # SEED_PRODUCTS:  3 (fixtures only) … 10000 (default 100)
 SEED_CUSTOMERS ?= 10000
 SEED_PRODUCTS  ?= 100
 
 seed:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed --customers=$(SEED_CUSTOMERS) --products=$(SEED_PRODUCTS)
+	bash scripts/run-seed.sh --customers=$(SEED_CUSTOMERS) --products=$(SEED_PRODUCTS)
 
 seed-reset:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed --reset --customers=$(SEED_CUSTOMERS) --products=$(SEED_PRODUCTS)
+	bash scripts/run-seed.sh --reset --customers=$(SEED_CUSTOMERS) --products=$(SEED_PRODUCTS)
 
 seed-small:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed --reset --customers=8 --products=3
+	bash scripts/run-seed.sh --reset --customers=8 --products=3
 
 seed-products:
-	DATABASE_URL="$(DATABASE_URL)" go run ./cmd/seed --reset --customers=8 --products=$(SEED_PRODUCTS)
+	bash scripts/run-seed.sh --reset --customers=8 --products=$(SEED_PRODUCTS)
 
 # Production bootstrap — admin account only (no demo customers/catalog).
 # Requires APP_ENV=production (or --allow-dev for local smoke tests).

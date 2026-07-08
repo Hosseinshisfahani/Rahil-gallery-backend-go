@@ -135,6 +135,7 @@ type ListRow struct {
 	PurchasedCategories []string
 	CustomerAgeRange *string
 	Gender           *string
+	ImportProfile    json.RawMessage
 }
 
 type Detail struct {

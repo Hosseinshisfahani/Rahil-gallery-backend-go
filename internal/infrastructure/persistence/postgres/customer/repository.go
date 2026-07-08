@@ -156,7 +156,8 @@ SELECT
   ` + crmCustomerTypeExpr + `,
   ` + crmPurchasedCategoriesExpr + `,
   ` + crmAgeRangeExpr + `,
-  ` + crmGenderExpr + `
+  ` + crmGenderExpr + `,
+  cp.import_profile
 %s %s
 ORDER BY u.created_at DESC
 LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.args)+1, len(q.args)+2)
@@ -178,6 +179,7 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 		var customerType *string
 		var purchasedCategories []string
 		var customerAgeRange, gender *string
+		var importProfile []byte
 		if err := rows.Scan(
 			&row.ID, &row.FullName, &row.Phone, &email,
 			&row.RegisteredAt, &lastActivity, &lastPurchase,
@@ -185,6 +187,7 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 			&row.Segment, &row.Status, &row.IsVIP, &tags,
 			&customerType, &purchasedCategories,
 			&customerAgeRange, &gender,
+			&importProfile,
 		); err != nil {
 			return nil, err
 		}
@@ -196,6 +199,9 @@ LIMIT $%d OFFSET $%d`, q.cte, segmentExpr, statusExpr, q.from, q.where, len(q.ar
 		row.PurchasedCategories = purchasedCategories
 		row.CustomerAgeRange = customerAgeRange
 		row.Gender = gender
+		if len(importProfile) > 0 {
+			row.ImportProfile = append([]byte(nil), importProfile...)
+		}
 		domain.NormalizeListRowCRM(&row)
 		items = append(items, row)
 	}

@@ -64,6 +64,9 @@ func TestAuthIntegration_RegisterAndLogin(t *testing.T) {
 	login := httptest.NewRequest(http.MethodPost, "/api/v1/auth/login", bytes.NewReader(loginBody))
 	login.Header.Set("Content-Type", "application/json")
 	loginResp, _ := app.Test(login, -1)
+	if loginResp.StatusCode == http.StatusNotFound {
+		t.Fatal("POST /api/v1/auth/login must be registered (got 404)")
+	}
 	if loginResp.StatusCode != http.StatusOK {
 		t.Fatalf("login status %d", loginResp.StatusCode)
 	}
