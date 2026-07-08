@@ -8,8 +8,7 @@ import (
 )
 
 func TestLoad_DefaultAppPort(t *testing.T) {
-	dir := t.TempDir()
-	t.Chdir(dir)
+	// godotenv does not override env vars already set by the test runner.
 	t.Setenv("APP_PORT", "")
 
 	cfg, err := config.Load()
