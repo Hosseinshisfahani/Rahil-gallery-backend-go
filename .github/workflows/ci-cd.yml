@@ -71,6 +71,9 @@ jobs:
       - name: Save image tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ github.sha }} | gzip > api-image.tar.gz
 
+      - name: Bundle base Docker images
+        run: bash scripts/bundle-docker-images.sh base-images.tar.gz
+
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
@@ -105,11 +108,11 @@ jobs:
 
       - name: Upload image and deploy
         run: |
-          scp -o StrictHostKeyChecking=yes api-image.tar.gz \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/api-image.tar.gz"
+          scp -o StrictHostKeyChecking=yes api-image.tar.gz base-images.tar.gz \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/"
           ssh -o StrictHostKeyChecking=yes \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "bash ${SERVER_DEPLOY_PATH}/scripts/deploy-remote.sh /tmp/api-image.tar.gz ${GITHUB_SHA}"
+            "bash ${SERVER_DEPLOY_PATH}/scripts/deploy-remote.sh /tmp/api-image.tar.gz ${GITHUB_SHA} /tmp/base-images.tar.gz"
         env:
           GITHUB_SHA: ${{ github.sha }}
           SERVER_DEPLOY_PATH: ${{ secrets.SERVER_DEPLOY_PATH }}

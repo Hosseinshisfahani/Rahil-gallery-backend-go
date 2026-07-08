@@ -20,7 +20,7 @@ Deploy includes API health check and optional chained client deploy via `REPO_DI
 
 ## First-time VPS
 
-1. Load base images once: `bash scripts/bundle-docker-images.sh` locally → `docker load` on server  
+1. Load base images once: handled automatically by CI (`base-images.tar.gz`); manual fallback is `scripts/bundle-docker-images.sh`  
 2. Create `.env` from `.env.example` (set `JWT_ACCESS_SECRET`)  
 3. Add deploy public key to `authorized_keys`
 
@@ -73,4 +73,4 @@ Use one of these instead:
 | Full stack with containerized API | CI/CD deploy, then `make docker-prod-up` |
 | Manual API image transfer | build locally → `docker save` → `docker load` on VPS → `make docker-prod-up` |
 
-Required once on VPS: load base images via `scripts/bundle-docker-images.sh`.
+Required once on VPS: base images are loaded automatically on the first CI deploy. Use `scripts/bundle-docker-images.sh` only for manual/offline bootstrap.

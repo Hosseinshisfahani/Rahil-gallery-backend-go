@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Server-side deploy hook — called by GitHub Actions over SSH.
-# Usage: bash scripts/deploy-remote.sh /tmp/api-image.tar.gz <git-sha>
+# Usage: bash scripts/deploy-remote.sh /tmp/api-image.tar.gz <git-sha> [/tmp/base-images.tar.gz]
 set -euo pipefail
 
 IMAGE_TAR="${1:?image tar path required}"
 GIT_SHA="${2:-latest}"
+BASE_IMAGES_TAR="${3:-/tmp/base-images.tar.gz}"
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT}"
 
@@ -25,6 +26,51 @@ require_image() {
     echo "       ${hint}" >&2
     exit 1
   fi
+}
+
+missing_image() {
+  local image="$1"
+  ! docker image inspect "${image}" >/dev/null 2>&1
+}
+
+needs_bundled_images() {
+  if missing_image "${POSTGRES_IMAGE}" || missing_image "${MIGRATE_IMAGE}"; then
+    return 0
+  fi
+  if [[ "${OBSERVABILITY_ENABLED}" == "true" ]]; then
+    if missing_image "${PROMETHEUS_IMAGE}" || missing_image "${GRAFANA_IMAGE}"; then
+      return 0
+    fi
+  fi
+  return 1
+}
+
+load_bundled_images() {
+  if [[ ! -f "${BASE_IMAGES_TAR}" ]]; then
+    return 1
+  fi
+
+  echo "==> Loading bundled base images from ${BASE_IMAGES_TAR}"
+  gunzip -c "${BASE_IMAGES_TAR}" | docker load
+  rm -f "${BASE_IMAGES_TAR}"
+  return 0
+}
+
+ensure_bundled_images() {
+  if ! needs_bundled_images; then
+    return
+  fi
+
+  if load_bundled_images && ! needs_bundled_images; then
+    echo "==> Bundled base images loaded successfully"
+    return
+  fi
+
+  echo "ERROR: required Docker base images are missing on this server." >&2
+  echo "       CI should upload ${BASE_IMAGES_TAR} during deploy." >&2
+  echo "       Manual fallback: bash scripts/bundle-docker-images.sh locally," >&2
+  echo "       scp the tarball to the server, then docker load." >&2
+  exit 1
 }
 
 load_env() {
@@ -156,10 +202,11 @@ if [[ ! -f .env ]]; then
 fi
 
 echo "==> Ensuring base images (postgres, migrate) exist locally"
+ensure_bundled_images
 require_image "${POSTGRES_IMAGE}" \
-  "Run once on a machine with Docker Hub: bash scripts/bundle-docker-images.sh, then scp and docker load on this server."
+  "Bundled base images were not loaded. Re-run deploy from CI or load scripts/bundle-docker-images.sh output manually."
 require_image "${MIGRATE_IMAGE}" \
-  "Run once on a machine with Docker Hub: bash scripts/bundle-docker-images.sh, then scp and docker load on this server."
+  "Bundled base images were not loaded. Re-run deploy from CI or load scripts/bundle-docker-images.sh output manually."
 
 echo "==> Ensuring database is up"
 "${COMPOSE[@]}" up -d db
@@ -185,9 +232,9 @@ echo "    API container image matches rahil-gallery-api:latest (${GIT_SHA})"
 if [[ "${OBSERVABILITY_ENABLED}" == "true" ]]; then
   echo "==> Ensuring observability images (prometheus, grafana) exist locally"
   require_image "${PROMETHEUS_IMAGE}" \
-    "Observability images are bundled with postgres/migrate in scripts/bundle-docker-images.sh — load them on this server."
+    "Bundled base images were not loaded. Re-run deploy from CI or load scripts/bundle-docker-images.sh output manually."
   require_image "${GRAFANA_IMAGE}" \
-    "Observability images are bundled with postgres/migrate in scripts/bundle-docker-images.sh — load them on this server."
+    "Bundled base images were not loaded. Re-run deploy from CI or load scripts/bundle-docker-images.sh output manually."
 
   echo "==> Starting observability stack (Prometheus + Grafana)"
   export PROMETHEUS_IMAGE GRAFANA_IMAGE
