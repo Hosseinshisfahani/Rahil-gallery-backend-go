@@ -35,3 +35,33 @@ func TestStringSliceOrEmpty(t *testing.T) {
 		}
 	})
 }
+
+func TestNormalizeDigits(t *testing.T) {
+	cases := []struct {
+		name string
+		in   string
+		want string
+	}{
+		{"persian phone", "۰۹۱۳۲۰۴۷۱۰۶", "09132047106"},
+		{"arabic phone", "٠٩١٣٢٠٤٧١٠٦", "09132047106"},
+		{"already english", "09132047106", "09132047106"},
+		{"mixed with plus", "+۹۸۹۱۳۲۰۴۷۱۰۶", "+989132047106"},
+		{"non-digits preserved", "tel: ۰۹۱۳", "tel: 0913"},
+		{"empty", "", ""},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := NormalizeDigits(tc.in); got != tc.want {
+				t.Fatalf("NormalizeDigits(%q) = %q, want %q", tc.in, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestNormalizeInputConvertsPhoneDigits(t *testing.T) {
+	in := &Input{Phone: " ۰۹۱۳۲۰۴۷۱۰۶ "}
+	NormalizeInput(in)
+	if in.Phone != "09132047106" {
+		t.Fatalf("expected normalized phone, got %q", in.Phone)
+	}
+}

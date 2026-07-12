@@ -254,6 +254,8 @@ func mapCustomerError(c *fiber.Ctx, err error) error {
 		return customerNotFound(c, "NOT_FOUND", err.Error())
 	case errors.Is(err, appcustomer.ErrPhoneAlreadyExists):
 		return customerConflict(c, "PHONE_EXISTS", err.Error())
+	case errors.Is(err, appcustomer.ErrEmailAlreadyExists):
+		return customerConflict(c, "EMAIL_EXISTS", err.Error())
 	case errors.Is(err, shared.ErrConflict):
 		return customerConflict(c, "CONFLICT", err.Error())
 	case errors.Is(err, customersignature.ErrInvalidType), errors.Is(err, customersignature.ErrTooLarge):

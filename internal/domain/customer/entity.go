@@ -127,7 +127,27 @@ func NormalizeInput(in *Input) {
 	if strings.TrimSpace(in.CustomerType) == "" {
 		in.CustomerType = DefaultCustomerType
 	}
+	in.Phone = strings.TrimSpace(NormalizeDigits(in.Phone))
 	in.PurchasedCategories = StringSliceOrEmpty(in.PurchasedCategories)
+}
+
+// NormalizeDigits converts Persian (۰-۹) and Arabic-Indic (٠-٩) digits to their
+// ASCII equivalents, leaving all other characters untouched. This keeps values
+// such as phone numbers stored consistently in English digits.
+func NormalizeDigits(s string) string {
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range s {
+		switch {
+		case r >= '\u06F0' && r <= '\u06F9': // Persian digits ۰-۹
+			b.WriteRune('0' + (r - '\u06F0'))
+		case r >= '\u0660' && r <= '\u0669': // Arabic-Indic digits ٠-٩
+			b.WriteRune('0' + (r - '\u0660'))
+		default:
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 // StringSliceOrEmpty returns a non-nil slice so Postgres TEXT[] columns receive

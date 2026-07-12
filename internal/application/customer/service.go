@@ -12,7 +12,10 @@ import (
 	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/storage/customersignature"
 )
 
-var ErrPhoneAlreadyExists = errors.New("phone number already registered")
+var (
+	ErrPhoneAlreadyExists = errors.New("phone number already registered")
+	ErrEmailAlreadyExists = errors.New("email already registered")
+)
 
 type Service struct {
 	customer   domain.Repository
@@ -60,7 +63,7 @@ func (s *Service) Create(ctx context.Context, in domain.Input) (*domain.Customer
 			return nil, err
 		}
 		if exists {
-			return nil, shared.ErrConflict
+			return nil, ErrEmailAlreadyExists
 		}
 		in.Email = &email
 	}
@@ -105,7 +108,7 @@ func (s *Service) Update(ctx context.Context, id shared.ID, in domain.Input) (*d
 			return nil, err
 		}
 		if exists {
-			return nil, shared.ErrConflict
+			return nil, ErrEmailAlreadyExists
 		}
 		in.Email = &email
 	}
