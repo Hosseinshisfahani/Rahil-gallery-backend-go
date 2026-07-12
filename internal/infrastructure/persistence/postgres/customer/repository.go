@@ -118,6 +118,7 @@ func (r *Repository) fetchCustomerPage(ctx context.Context, q listQuery, limit, 
 			return nil, err
 		}
 		domain.NormalizeListRow(&row)
+		row.PurchasedCategories = domain.StringSliceOrEmpty(row.PurchasedCategories)
 		items = append(items, row)
 	}
 	return items, rows.Err()
@@ -324,8 +325,6 @@ func scanCustomer(row scannable) (*domain.Customer, error) {
 	if c.CustomerType == "" {
 		c.CustomerType = domain.DefaultCustomerType
 	}
-	if len(c.PurchasedCategories) == 0 {
-		c.PurchasedCategories = append([]string(nil), domain.DefaultPurchasedCategories...)
-	}
+	c.PurchasedCategories = domain.StringSliceOrEmpty(c.PurchasedCategories)
 	return &c, nil
 }

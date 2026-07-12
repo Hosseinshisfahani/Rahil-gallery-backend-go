@@ -103,7 +103,7 @@ func ToCustomerSummary(row domain.ListRow) CustomerSummaryResponse {
 		FullName:            row.FullName,
 		Phone:               row.Phone,
 		CustomerType:        row.CustomerType,
-		PurchasedCategories: row.PurchasedCategories,
+		PurchasedCategories: domain.StringSliceOrEmpty(row.PurchasedCategories),
 		CustomerAgeRange:    row.CustomerAgeRange,
 		Gender:              row.Gender,
 		CreatedAt:           formatDate(row.CreatedAt),
@@ -156,7 +156,7 @@ func toImportProfileResponse(c *domain.Customer) ImportProfileResponse {
 		Gender:              c.Gender,
 		CustomerType:        c.CustomerType,
 		CustomerAgeRange:    c.CustomerAgeRange,
-		PurchasedCategories: append([]string(nil), c.PurchasedCategories...),
+		PurchasedCategories: domain.StringSliceOrEmpty(c.PurchasedCategories),
 		Description:         c.Description,
 		Signature:           sig,
 	}
@@ -230,7 +230,7 @@ func importProfileToInput(p ImportProfileRequest) (domain.Input, error) {
 		Gender:              p.Gender,
 		CustomerType:        p.CustomerType,
 		CustomerAgeRange:    p.CustomerAgeRange,
-		PurchasedCategories: append([]string(nil), p.PurchasedCategories...),
+		PurchasedCategories: domain.StringSliceOrEmpty(p.PurchasedCategories),
 		Description:         p.Description,
 		SignatureURL:        p.Signature,
 	}, nil

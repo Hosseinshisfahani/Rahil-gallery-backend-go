@@ -9,8 +9,6 @@ import (
 
 const DefaultCustomerType = "public"
 
-var DefaultPurchasedCategories = []string{"gold_and_stones"}
-
 type Customer struct {
 	ID                  shared.ID
 	FirstName           string
@@ -120,9 +118,6 @@ func NormalizeListRow(row *ListRow) {
 	if row.CustomerType == "" {
 		row.CustomerType = DefaultCustomerType
 	}
-	if len(row.PurchasedCategories) == 0 {
-		row.PurchasedCategories = append([]string(nil), DefaultPurchasedCategories...)
-	}
 }
 
 func NormalizeInput(in *Input) {
@@ -132,9 +127,16 @@ func NormalizeInput(in *Input) {
 	if strings.TrimSpace(in.CustomerType) == "" {
 		in.CustomerType = DefaultCustomerType
 	}
-	if len(in.PurchasedCategories) == 0 {
-		in.PurchasedCategories = append([]string(nil), DefaultPurchasedCategories...)
+	in.PurchasedCategories = StringSliceOrEmpty(in.PurchasedCategories)
+}
+
+// StringSliceOrEmpty returns a non-nil slice so Postgres TEXT[] columns receive
+// '{}' instead of NULL when no categories are selected.
+func StringSliceOrEmpty(values []string) []string {
+	if len(values) == 0 {
+		return []string{}
 	}
+	return append([]string(nil), values...)
 }
 
 func ParseDate(s *string) (*time.Time, error) {

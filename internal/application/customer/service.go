@@ -143,7 +143,7 @@ func inputToCustomer(id shared.ID, in domain.Input, createdAt, updatedAt time.Ti
 		Gender:              trimOptional(in.Gender),
 		CustomerType:        in.CustomerType,
 		CustomerAgeRange:    trimOptional(in.CustomerAgeRange),
-		PurchasedCategories: append([]string(nil), in.PurchasedCategories...),
+		PurchasedCategories: domain.StringSliceOrEmpty(in.PurchasedCategories),
 		Description:         trimOptional(in.Description),
 		SignatureURL:        trimOptional(in.SignatureURL),
 		CreatedAt:           createdAt,
