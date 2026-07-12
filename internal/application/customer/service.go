@@ -40,11 +40,8 @@ func (s *Service) Create(ctx context.Context, in domain.Input) (*domain.Customer
 	phone := strings.TrimSpace(in.Phone)
 	first := strings.TrimSpace(in.FirstName)
 	last := strings.TrimSpace(in.LastName)
-	birthday := in.Birthday
-	marriageDate := in.MarriageDate
-	importantDate := in.ImportantDate
-	firstVisitDate := in.FirstVisitDate
-	if phone == "" || first == "" || last == "" || birthday == nil || marriageDate == nil || firstVisitDate == nil || importantDate == nil {
+	
+	if phone == "" || first == "" || last == "" {
 		return nil, shared.ErrInvalidInput
 	}
 
