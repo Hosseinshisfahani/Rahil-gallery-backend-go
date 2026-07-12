@@ -1,194 +1,60 @@
 package customer
 
 import (
-	"encoding/json"
 	"strings"
 	"time"
 
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/shared"
 )
 
-type Segment string
+const DefaultCustomerType = "public"
 
-const (
-	SegmentNew       Segment = "new"
-	SegmentActive    Segment = "active"
-	SegmentReturning Segment = "returning"
-	SegmentVIP       Segment = "vip"
-	SegmentInactive  Segment = "inactive"
-)
+var DefaultPurchasedCategories = []string{"gold_and_stones"}
 
-type ImportMode string
-
-const (
-	ImportModeQuick           ImportMode = "quick"
-	ImportModeHistoryIncluded ImportMode = "history_included"
-)
-
-type VIPSource string
-
-const (
-	VIPSourceManual    VIPSource = "manual"
-	VIPSourceAutomatic VIPSource = "automatic"
-)
-
-type BlockReason string
-
-const (
-	BlockReasonFraudSuspicion BlockReason = "fraud_suspicion"
-	BlockReasonPaymentIssues  BlockReason = "payment_issues"
-	BlockReasonReturnAbuse    BlockReason = "return_abuse"
-	BlockReasonSystemMisuse   BlockReason = "system_misuse"
-)
-
-type AuditAction string
-
-const (
-	AuditActionBlock       AuditAction = "block"
-	AuditActionUnblock     AuditAction = "unblock"
-	AuditActionVIPAssign   AuditAction = "vip_assign"
-	AuditActionVIPRemove   AuditAction = "vip_remove"
-	AuditActionTagAdd      AuditAction = "tag_add"
-	AuditActionTagRemove   AuditAction = "tag_remove"
-	AuditActionProfileEdit AuditAction = "profile_edit"
-	AuditActionNoteAdd     AuditAction = "note_add"
-	AuditActionExport      AuditAction = "export"
-	AuditActionCreated     AuditAction = "account_created"
-)
-
-type Profile struct {
-	UserID          shared.ID
-	Locale          string
-	DefaultRingSize *string
-	IsVIP           bool
-	VIPSource       *VIPSource
-	ImportMode      *ImportMode
-	ImportProfile   json.RawMessage
-	Tags            []string
-	BlockReason     *BlockReason
-	BlockNote       *string
-	LastActivityAt  *time.Time
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+type Customer struct {
+	ID                  shared.ID
+	FirstName           string
+	LastName            string
+	Job                 *string
+	Phone               string
+	Email               *string
+	Address             *string
+	Birthday            *time.Time
+	MarriageDate        *time.Time
+	ImportantDate       *time.Time
+	FirstVisitDate      *time.Time
+	Gender              *string
+	CustomerType        string
+	CustomerAgeRange    *string
+	PurchasedCategories []string
+	Description         *string
+	SignatureURL        *string
+	CreatedAt           time.Time
+	UpdatedAt           time.Time
 }
 
-type Note struct {
-	ID        shared.ID
-	UserID    shared.ID
-	AuthorID  shared.ID
-	Author    string
-	Body      string
-	CreatedAt time.Time
-}
-
-type AuditEntry struct {
-	ID           shared.ID
-	AdminID      shared.ID
-	AdminName    string
-	TargetUserID shared.ID
-	Action       AuditAction
-	Reason       *string
-	Details      *string
-	CreatedAt    time.Time
-}
-
-type OrderSummary struct {
-	ID        shared.ID
-	Date      time.Time
-	Total     float64
-	Status    string
-	ItemCount int
-	HasReturn bool
-}
-
-type WishlistSummary struct {
-	ID                   shared.ID
-	ProductName          string
-	Category             string
-	Price                float64
-	SavedAt              time.Time
-	IsConfiguration      bool
-	ConfigurationSummary *string
-}
-
-type CategoryInsight struct {
-	Category   string
-	Count      int
-	Percentage float64
+func (c Customer) FullName() string {
+	return strings.TrimSpace(c.FirstName + " " + c.LastName)
 }
 
 type ListRow struct {
-	ID               shared.ID
-	FullName         string
-	Phone            string
-	Email            *string
-	RegisteredAt     time.Time
-	LastActivityAt   *time.Time
-	LastPurchaseDate *time.Time
-	TotalOrders      int
-	TotalLTV         float64
-	Segment          Segment
-	Status           string
-	IsVIP            bool
-	Tags             []string
-	CustomerType     *string
+	ID                  shared.ID
+	FullName            string
+	Phone               string
+	Email               *string
+	CustomerType        string
+	CustomerAgeRange    *string
+	Gender              *string
 	PurchasedCategories []string
-	CustomerAgeRange *string
-	Gender           *string
-	ImportProfile    json.RawMessage
+	CreatedAt           time.Time
 }
 
-type Detail struct {
-	ListRow
-	Locale                 string
-	DefaultRingSize        *string
-	AverageOrderValue      float64
-	FirstPurchaseDate      *time.Time
-	VIPSource              *VIPSource
-	TopCategories          []CategoryInsight
-	WishlistCount          int
-	WishlistAdditions      int
-	WishlistRemovals       int
-	WishlistConversionRate float64
-	CartAbandonmentCount   int
-	ConfiguratorUsageCount int
-	EngagementScore        int
-	RepeatPurchaseRate     float64
-	PurchaseFrequency      float64
-	FunnelPosition         string
-	BlockReason            *BlockReason
-	BlockNote              *string
-	ImportMode             *ImportMode
-	ImportProfile          json.RawMessage
-	Orders                 []OrderSummary
-	Wishlist               []WishlistSummary
-	Notes                  []Note
-	AuditLog               []AuditEntry
-}
-
-// ListFilter supports two mutually exclusive modes (enforced in HTTP layer):
-//   - Quick search: QuickSearch (q) — text searches name; 4+ digits search phone prefix.
-//   - Advanced: structured filters below (segment, LTV, dates, email, id, …).
 type ListFilter struct {
 	QuickSearch string
 
-	CustomerID       *shared.ID
-	Email            string
-	Segment          string
-	Status           string
-	VIP              *bool
-	LTVMin           *float64
-	LTVMax           *float64
-	OrdersMin        *int
-	OrdersMax        *int
-	RegisteredFrom   *time.Time
-	RegisteredTo     *time.Time
-	LastPurchaseFrom *time.Time
-	LastPurchaseTo   *time.Time
-	LastActivityFrom *time.Time
-	LastActivityTo   *time.Time
-	Tags             []string
-	HasPurchased     string
+	CustomerID *shared.ID
+	Email      string
+
 	CustomerAgeRange string
 	Gender           string
 	CustomerTypes    []string
@@ -200,28 +66,12 @@ type ListFilter struct {
 	MarriageFrom     *time.Time
 	MarriageTo       *time.Time
 
-	// SkipCount skips COUNT(*) and uses LIMIT+1 for hasMore (HTTP: includeTotal=false).
 	SkipCount bool
 }
 
 func (f ListFilter) HasAdvancedFilters() bool {
 	return f.CustomerID != nil ||
 		strings.TrimSpace(f.Email) != "" ||
-		f.Segment != "" ||
-		f.Status != "" ||
-		f.VIP != nil ||
-		f.LTVMin != nil ||
-		f.LTVMax != nil ||
-		f.OrdersMin != nil ||
-		f.OrdersMax != nil ||
-		f.RegisteredFrom != nil ||
-		f.RegisteredTo != nil ||
-		f.LastPurchaseFrom != nil ||
-		f.LastPurchaseTo != nil ||
-		f.LastActivityFrom != nil ||
-		f.LastActivityTo != nil ||
-		len(f.Tags) > 0 ||
-		f.HasPurchased != "" ||
 		strings.TrimSpace(f.CustomerAgeRange) != "" ||
 		strings.TrimSpace(f.Gender) != "" ||
 		len(f.CustomerTypes) > 0 ||
@@ -241,5 +91,71 @@ type ListResult struct {
 	PerPage    int
 	TotalPages int
 	HasMore    bool
-	TotalExact bool // false when COUNT was skipped (includeTotal=false)
+	TotalExact bool
+}
+
+type Input struct {
+	FirstName           string
+	LastName            string
+	Job                 *string
+	Phone               string
+	Email               *string
+	Address             *string
+	Birthday            *time.Time
+	MarriageDate        *time.Time
+	ImportantDate       *time.Time
+	FirstVisitDate      *time.Time
+	Gender              *string
+	CustomerType        string
+	CustomerAgeRange    *string
+	PurchasedCategories []string
+	Description         *string
+	SignatureURL        *string
+}
+
+func NormalizeListRow(row *ListRow) {
+	if row == nil {
+		return
+	}
+	if row.CustomerType == "" {
+		row.CustomerType = DefaultCustomerType
+	}
+	if len(row.PurchasedCategories) == 0 {
+		row.PurchasedCategories = append([]string(nil), DefaultPurchasedCategories...)
+	}
+}
+
+func NormalizeInput(in *Input) {
+	if in == nil {
+		return
+	}
+	if strings.TrimSpace(in.CustomerType) == "" {
+		in.CustomerType = DefaultCustomerType
+	}
+	if len(in.PurchasedCategories) == 0 {
+		in.PurchasedCategories = append([]string(nil), DefaultPurchasedCategories...)
+	}
+}
+
+func ParseDate(s *string) (*time.Time, error) {
+	if s == nil {
+		return nil, nil
+	}
+	v := strings.TrimSpace(*s)
+	if v == "" {
+		return nil, nil
+	}
+	t, err := time.Parse("2006-01-02", v)
+	if err != nil {
+		return nil, err
+	}
+	return &t, nil
+}
+
+func FormatDate(t *time.Time) *string {
+	if t == nil {
+		return nil
+	}
+	s := t.Format("2006-01-02")
+	return &s
 }

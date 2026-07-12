@@ -91,10 +91,6 @@ func Run(ctx context.Context, pool *pgxpool.Pool, opts Options) error {
 		return err
 	}
 
-	if err := r.refreshCommerceStats(ctx); err != nil {
-		return fmt.Errorf("fixture commerce stats: %w", err)
-	}
-
 	if err := r.seedBulkCustomers(ctx, roles.customer); err != nil {
 		return fmt.Errorf("bulk customers: %w", err)
 	}
@@ -103,10 +99,6 @@ func Run(ctx context.Context, pool *pgxpool.Pool, opts Options) error {
 	}
 	if err := r.seedBulkProducts(ctx); err != nil {
 		return fmt.Errorf("bulk products: %w", err)
-	}
-
-	if err := r.backfillMissingCRMProfiles(ctx); err != nil {
-		return fmt.Errorf("backfill CRM profiles: %w", err)
 	}
 
 	log.Println("seed: done")
@@ -172,15 +164,13 @@ func (r *Runner) resetBulk(ctx context.Context) error {
 	log.Println("seed: clearing bulk data (phone prefix +98900...)...")
 
 	stmts := []string{
-		`DELETE FROM customer_audit_log WHERE target_user_id IN (SELECT id FROM users WHERE phone LIKE $1)`,
-		`DELETE FROM customer_notes WHERE user_id IN (SELECT id FROM users WHERE phone LIKE $1)`,
-		`DELETE FROM wishlist_items WHERE user_id IN (SELECT id FROM users WHERE phone LIKE $1)`,
+		`DELETE FROM wishlist_items WHERE user_id IN (SELECT id FROM customers WHERE phone LIKE $1)`,
 		`DELETE FROM order_items WHERE order_id IN (SELECT id FROM orders WHERE order_number LIKE 'RG-BULK-%')`,
 		`DELETE FROM payments WHERE order_id IN (SELECT id FROM orders WHERE order_number LIKE 'RG-BULK-%')`,
 		`DELETE FROM order_status_history WHERE order_id IN (SELECT id FROM orders WHERE order_number LIKE 'RG-BULK-%')`,
 		`DELETE FROM orders WHERE order_number LIKE 'RG-BULK-%'`,
-		`DELETE FROM customer_profiles WHERE user_id IN (SELECT id FROM users WHERE phone LIKE $1)`,
-		`DELETE FROM users WHERE phone LIKE $1`,
+		`DELETE FROM users WHERE id IN (SELECT id FROM customers WHERE phone LIKE $1)`,
+		`DELETE FROM customers WHERE phone LIKE $1`,
 	}
 
 	pattern := bulkPhonePrefix + "%"
@@ -206,7 +196,6 @@ func (r *Runner) resetFixtures(ctx context.Context) error {
 	defer tx.Rollback(ctx)
 
 	cIDs := customerIDs()
-	sIDs := append(staffIDs(), cIDs...)
 	oIDs := orderIDs()
 	vIDs := variantIDs()
 	pIDs := productIDs()
@@ -218,8 +207,6 @@ func (r *Runner) resetFixtures(ctx context.Context) error {
 		q    string
 		args []any
 	}{
-		{`DELETE FROM customer_audit_log WHERE target_user_id = ANY($1) OR admin_id = ANY($2)`, []any{cIDs, sIDs}},
-		{`DELETE FROM customer_notes WHERE user_id = ANY($1)`, []any{cIDs}},
 		{`DELETE FROM wishlist_items WHERE user_id = ANY($1)`, []any{cIDs}},
 		{`DELETE FROM order_status_history WHERE order_id = ANY($1)`, []any{oIDs}},
 		{`DELETE FROM order_items WHERE id = ANY($1)`, []any{itemIDs}},
@@ -232,8 +219,9 @@ func (r *Runner) resetFixtures(ctx context.Context) error {
 		{`DELETE FROM products WHERE id = ANY($1)`, []any{pIDs}},
 		{`DELETE FROM collections WHERE id = ANY($1)`, []any{fixtureCollectionIDs()}},
 		{`DELETE FROM categories WHERE id = ANY($1)`, []any{fixtureCategoryIDs()}},
-		{`DELETE FROM customer_profiles WHERE user_id = ANY($1)`, []any{cIDs}},
-		{`DELETE FROM users WHERE id = ANY($1)`, []any{sIDs}},
+		{`DELETE FROM users WHERE id = ANY($1)`, []any{cIDs}},
+		{`DELETE FROM customers WHERE id = ANY($1)`, []any{cIDs}},
+		{`DELETE FROM users WHERE id = ANY($1)`, []any{staffIDs()}},
 	}
 
 	for _, item := range queries {

@@ -40,6 +40,7 @@ type seedImportProfile struct {
 	FirstVisitDate      string   `json:"firstVisitDate,omitempty"`
 	Birthday            string   `json:"birthday,omitempty"`
 	MarriageDate        string   `json:"marriageDate,omitempty"`
+	ImportantDate       string   `json:"importantDate,omitempty"`
 	Description         string   `json:"description,omitempty"`
 	Signature           string   `json:"signature,omitempty"`
 }

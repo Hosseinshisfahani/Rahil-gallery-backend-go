@@ -45,17 +45,17 @@ func (h *AdminCustomerHandler) Create(c *fiber.Ctx) error {
 		return customerBadRequest(c, "INVALID_JSON", "invalid request body")
 	}
 
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.Create(c.Context(), adminID, req.ToInput())
+	input, err := req.ToInput()
 	if err != nil {
 		return mapCustomerError(c, err)
 	}
 
-	return c.Status(fiber.StatusCreated).JSON(dto.ToCustomerDetail(detail))
+	customer, err := h.svc.Create(c.Context(), input)
+	if err != nil {
+		return mapCustomerError(c, err)
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(dto.ToCustomerDetail(customer))
 }
 
 func (h *AdminCustomerHandler) Get(c *fiber.Ctx) error {
@@ -64,12 +64,11 @@ func (h *AdminCustomerHandler) Get(c *fiber.Ctx) error {
 		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
 	}
 
-	detail, err := h.svc.Get(c.Context(), id)
+	customer, err := h.svc.Get(c.Context(), id)
 	if err != nil {
 		return mapCustomerError(c, err)
 	}
-
-	return c.JSON(dto.ToCustomerDetail(detail))
+	return c.JSON(dto.ToCustomerDetail(customer))
 }
 
 func (h *AdminCustomerHandler) Update(c *fiber.Ctx) error {
@@ -83,17 +82,17 @@ func (h *AdminCustomerHandler) Update(c *fiber.Ctx) error {
 		return customerBadRequest(c, "INVALID_JSON", "invalid request body")
 	}
 
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.Update(c.Context(), adminID, id, req.ToInput())
+	input, err := req.ToInput()
 	if err != nil {
 		return mapCustomerError(c, err)
 	}
 
-	return c.JSON(dto.ToCustomerDetail(detail))
+	customer, err := h.svc.Update(c.Context(), id, input)
+	if err != nil {
+		return mapCustomerError(c, err)
+	}
+
+	return c.JSON(dto.ToCustomerDetail(customer))
 }
 
 func (h *AdminCustomerHandler) Delete(c *fiber.Ctx) error {
@@ -107,97 +106,6 @@ func (h *AdminCustomerHandler) Delete(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(fiber.Map{"success": true})
-}
-
-func (h *AdminCustomerHandler) Block(c *fiber.Ctx) error {
-	id, err := dto.ParseCustomerID(c.Params("id"))
-	if err != nil {
-		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
-	}
-
-	var req dto.BlockCustomerRequest
-	if err := c.BodyParser(&req); err != nil {
-		return customerBadRequest(c, "INVALID_JSON", "invalid request body")
-	}
-
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.Block(c.Context(), adminID, id, domain.BlockReason(req.Reason), req.Note)
-	if err != nil {
-		return mapCustomerError(c, err)
-	}
-
-	return c.JSON(dto.ToCustomerDetail(detail))
-}
-
-func (h *AdminCustomerHandler) Unblock(c *fiber.Ctx) error {
-	id, err := dto.ParseCustomerID(c.Params("id"))
-	if err != nil {
-		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
-	}
-
-	var req dto.UnblockCustomerRequest
-	if err := c.BodyParser(&req); err != nil {
-		return customerBadRequest(c, "INVALID_JSON", "invalid request body")
-	}
-
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.Unblock(c.Context(), adminID, id, req.Justification)
-	if err != nil {
-		return mapCustomerError(c, err)
-	}
-
-	return c.JSON(dto.ToCustomerDetail(detail))
-}
-
-func (h *AdminCustomerHandler) ToggleVIP(c *fiber.Ctx) error {
-	id, err := dto.ParseCustomerID(c.Params("id"))
-	if err != nil {
-		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
-	}
-
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.ToggleVIP(c.Context(), adminID, id)
-	if err != nil {
-		return mapCustomerError(c, err)
-	}
-
-	return c.JSON(dto.ToCustomerDetail(detail))
-}
-
-func (h *AdminCustomerHandler) ToggleTag(c *fiber.Ctx) error {
-	id, err := dto.ParseCustomerID(c.Params("id"))
-	if err != nil {
-		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
-	}
-
-	var req dto.ToggleTagRequest
-	if err := c.BodyParser(&req); err != nil {
-		return customerBadRequest(c, "INVALID_JSON", "invalid request body")
-	}
-
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.ToggleTag(c.Context(), adminID, id, req.Tag)
-	if err != nil {
-		return mapCustomerError(c, err)
-	}
-
-	return c.JSON(dto.ToCustomerDetail(detail))
 }
 
 func (h *AdminCustomerHandler) UploadSignature(c *fiber.Ctx) error {
@@ -230,17 +138,12 @@ func (h *AdminCustomerHandler) UploadSignature(c *fiber.Ctx) error {
 		contentType = mime.TypeByExtension(filepath.Ext(file.Filename))
 	}
 
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.UploadSignature(c.Context(), adminID, id, contentType, data)
+	customer, err := h.svc.UploadSignature(c.Context(), id, contentType, data)
 	if err != nil {
 		return mapCustomerError(c, err)
 	}
 
-	return c.JSON(dto.ToCustomerDetail(detail))
+	return c.JSON(dto.ToCustomerDetail(customer))
 }
 
 func (h *AdminCustomerHandler) DeleteSignature(c *fiber.Ctx) error {
@@ -249,50 +152,18 @@ func (h *AdminCustomerHandler) DeleteSignature(c *fiber.Ctx) error {
 		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
 	}
 
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.DeleteSignature(c.Context(), adminID, id)
+	customer, err := h.svc.DeleteSignature(c.Context(), id)
 	if err != nil {
 		return mapCustomerError(c, err)
 	}
 
-	return c.JSON(dto.ToCustomerDetail(detail))
-}
-
-func (h *AdminCustomerHandler) AddNote(c *fiber.Ctx) error {
-	id, err := dto.ParseCustomerID(c.Params("id"))
-	if err != nil {
-		return customerBadRequest(c, "VALIDATION_ERROR", "invalid customer id")
-	}
-
-	var req dto.AddNoteRequest
-	if err := c.BodyParser(&req); err != nil {
-		return customerBadRequest(c, "INVALID_JSON", "invalid request body")
-	}
-
-	adminID, err := userIDFromLocals(c)
-	if err != nil {
-		return customerUnauthorized(c)
-	}
-
-	detail, err := h.svc.AddNote(c.Context(), adminID, id, req.Body)
-	if err != nil {
-		return mapCustomerError(c, err)
-	}
-
-	return c.JSON(dto.ToCustomerDetail(detail))
+	return c.JSON(dto.ToCustomerDetail(customer))
 }
 
 func parseCustomerFilters(c *fiber.Ctx) domain.ListFilter {
 	filter := domain.ListFilter{
-		QuickSearch:  strings.TrimSpace(c.Query("q")),
-		Email:        strings.TrimSpace(c.Query("email")),
-		Segment:      c.Query("segment"),
-		Status:       c.Query("status"),
-		HasPurchased: c.Query("hasPurchased"),
+		QuickSearch: strings.TrimSpace(c.Query("q")),
+		Email:       strings.TrimSpace(c.Query("email")),
 	}
 
 	if idStr := strings.TrimSpace(c.Query("id")); idStr != "" {
@@ -301,21 +172,6 @@ func parseCustomerFilters(c *fiber.Ctx) domain.ListFilter {
 		}
 	}
 
-	if v := c.Query("vip"); v != "" {
-		b := v == "true"
-		filter.VIP = &b
-	}
-
-	filter.LTVMin = queryFloatPtr(c, "ltvMin")
-	filter.LTVMax = queryFloatPtr(c, "ltvMax")
-	filter.OrdersMin = queryIntPtr(c, "ordersMin")
-	filter.OrdersMax = queryIntPtr(c, "ordersMax")
-	filter.RegisteredFrom = queryDatePtr(c, "registeredFrom")
-	filter.RegisteredTo = queryDatePtr(c, "registeredTo")
-	filter.LastPurchaseFrom = queryDatePtr(c, "lastPurchaseFrom")
-	filter.LastPurchaseTo = queryDatePtr(c, "lastPurchaseTo")
-	filter.LastActivityFrom = queryDatePtr(c, "lastActivityFrom")
-	filter.LastActivityTo = queryDatePtr(c, "lastActivityTo")
 	filter.CustomerAgeRange = strings.TrimSpace(c.Query("ageRange"))
 	filter.Gender = strings.TrimSpace(c.Query("gender"))
 	filter.FirstVisitFrom = queryDatePtr(c, "firstVisitFrom")
@@ -325,9 +181,6 @@ func parseCustomerFilters(c *fiber.Ctx) domain.ListFilter {
 	filter.MarriageFrom = queryDatePtr(c, "marriageFrom")
 	filter.MarriageTo = queryDatePtr(c, "marriageTo")
 
-	if tags := strings.TrimSpace(c.Query("tags")); tags != "" {
-		filter.Tags = splitCSV(tags)
-	}
 	if customerTypes := strings.TrimSpace(c.Query("customerTypes")); customerTypes != "" {
 		filter.CustomerTypes = splitCSV(customerTypes)
 	}
@@ -335,7 +188,6 @@ func parseCustomerFilters(c *fiber.Ctx) domain.ListFilter {
 		filter.PurchaseTypes = splitCSV(purchaseTypes)
 	}
 
-	// Quick search and advanced filters are mutually exclusive (advanced wins).
 	if filter.HasAdvancedFilters() {
 		filter.QuickSearch = ""
 	}
@@ -370,20 +222,8 @@ func queryInt(c *fiber.Ctx, key string, fallback int) int {
 	return n
 }
 
-func queryIntPtr(c *fiber.Ctx, key string) *int {
-	v := c.Query(key)
-	if v == "" {
-		return nil
-	}
-	n, err := strconv.Atoi(v)
-	if err != nil {
-		return nil
-	}
-	return &n
-}
-
 func queryFloatPtr(c *fiber.Ctx, key string) *float64 {
-	v := c.Query(key)
+	v := strings.TrimSpace(c.Query(key))
 	if v == "" {
 		return nil
 	}
@@ -416,13 +256,8 @@ func mapCustomerError(c *fiber.Ctx, err error) error {
 		return customerConflict(c, "PHONE_EXISTS", err.Error())
 	case errors.Is(err, shared.ErrConflict):
 		return customerConflict(c, "CONFLICT", err.Error())
-	case errors.Is(err, appcustomer.ErrInvalidBlockReason), errors.Is(err, appcustomer.ErrInvalidTag),
-		errors.Is(err, appcustomer.ErrInvalidSavedView), errors.Is(err, appcustomer.ErrSavedViewNameRequired):
-		return customerBadRequest(c, "VALIDATION_ERROR", err.Error())
 	case errors.Is(err, customersignature.ErrInvalidType), errors.Is(err, customersignature.ErrTooLarge):
 		return customerBadRequest(c, "VALIDATION_ERROR", err.Error())
-	case errors.Is(err, shared.ErrForbidden):
-		return customerForbidden(c)
 	default:
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error": fiber.Map{"code": "INTERNAL_ERROR", "message": "something went wrong"},
@@ -445,17 +280,5 @@ func customerNotFound(c *fiber.Ctx, code, msg string) error {
 func customerConflict(c *fiber.Ctx, code, msg string) error {
 	return c.Status(fiber.StatusConflict).JSON(fiber.Map{
 		"error": fiber.Map{"code": code, "message": msg},
-	})
-}
-
-func customerUnauthorized(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
-		"error": fiber.Map{"code": "UNAUTHORIZED", "message": "authentication required"},
-	})
-}
-
-func customerForbidden(c *fiber.Ctx) error {
-	return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
-		"error": fiber.Map{"code": "FORBIDDEN", "message": "insufficient permissions"},
 	})
 }

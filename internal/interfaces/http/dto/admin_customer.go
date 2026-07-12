@@ -1,11 +1,10 @@
 package dto
 
 import (
-	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	appcustomer "github.com/rahil-gallery/rahil-gallery-server/internal/application/customer"
 	domain "github.com/rahil-gallery/rahil-gallery-server/internal/domain/customer"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/shared"
 )
@@ -24,248 +23,142 @@ type PaginationMeta struct {
 }
 
 type CustomerSummaryResponse struct {
-	ID               string   `json:"id"`
-	FullName         string   `json:"fullName"`
-	Phone            string   `json:"phone"`
-	ImportProfile    json.RawMessage `json:"importProfile,omitempty"`
-	RegisteredAt     string   `json:"registeredAt"`
-	LastActivityAt   string   `json:"lastActivityAt"`
-	LastPurchaseDate *string  `json:"lastPurchaseDate,omitempty"`
-	TotalOrders      int      `json:"totalOrders"`
-	TotalLtv         float64  `json:"totalLtv"`
-	Segment          string   `json:"segment"`
-	Status           string   `json:"status"`
-	IsVip               bool     `json:"isVip"`
-	Tags                []string `json:"tags"`
+	ID                  string   `json:"id"`
+	FullName            string   `json:"fullName"`
+	Phone               string   `json:"phone"`
 	CustomerType        string   `json:"customerType"`
 	PurchasedCategories []string `json:"purchasedCategories"`
 	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
 	Gender              *string  `json:"gender,omitempty"`
-	Country             string   `json:"country"`
-	Href             string   `json:"href"`
+	CreatedAt           string   `json:"createdAt"`
+	Href                string   `json:"href"`
+}
+
+type ImportProfileResponse struct {
+	FirstName           string   `json:"firstName"`
+	LastName            string   `json:"lastName"`
+	Job                 *string  `json:"job,omitempty"`
+	Phone               string   `json:"phone"`
+	Email               *string  `json:"email,omitempty"`
+	Address             *string  `json:"address,omitempty"`
+	Birthday            *string  `json:"birthday,omitempty"`
+	MarriageDate        *string  `json:"marriageDate,omitempty"`
+	ImportantDate       *string  `json:"importantDate,omitempty"`
+	FirstVisitDate      *string  `json:"firstVisitDate,omitempty"`
+	Gender              *string  `json:"gender,omitempty"`
+	CustomerType        string   `json:"customerType"`
+	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
+	PurchasedCategories []string `json:"purchasedCategories"`
+	Description         *string  `json:"description,omitempty"`
+	Signature           *string  `json:"signature,omitempty"`
 }
 
 type CustomerDetailResponse struct {
 	CustomerSummaryResponse
-	Email                    *string                  `json:"email,omitempty"`
-	Locale                   string                   `json:"locale"`
-	DefaultRingSize          *string                  `json:"defaultRingSize,omitempty"`
-	AverageOrderValue        float64                  `json:"averageOrderValue"`
-	FirstPurchaseDate        *string                  `json:"firstPurchaseDate,omitempty"`
-	VipSource                *string                  `json:"vipSource"`
-	TopCategories            []CategoryInsightResponse `json:"topCategories"`
-	WishlistCount            int                      `json:"wishlistCount"`
-	WishlistAdditions        int                      `json:"wishlistAdditions"`
-	WishlistRemovals         int                      `json:"wishlistRemovals"`
-	WishlistConversionRate   float64                  `json:"wishlistConversionRate"`
-	CartAbandonmentCount     int                      `json:"cartAbandonmentCount"`
-	ConfiguratorUsageCount   int                      `json:"configuratorUsageCount"`
-	EngagementScore          int                      `json:"engagementScore"`
-	RepeatPurchaseRate       float64                  `json:"repeatPurchaseRate"`
-	PurchaseFrequency        float64                  `json:"purchaseFrequency"`
-	FunnelPosition           string                   `json:"funnelPosition"`
-	BlockReason              *string                  `json:"blockReason,omitempty"`
-	BlockNote                *string                  `json:"blockNote,omitempty"`
-	Orders                   []CustomerOrderResponse  `json:"orders"`
-	Wishlist                 []WishlistItemResponse   `json:"wishlist"`
-	Notes                    []CustomerNoteResponse   `json:"notes"`
-	AuditLog                 []AuditLogEntryResponse  `json:"auditLog"`
-	ImportMode               *string                  `json:"importMode,omitempty"`
-	ImportProfile            json.RawMessage          `json:"importProfile,omitempty"`
-}
-
-type CategoryInsightResponse struct {
-	Category   string  `json:"category"`
-	Count      int     `json:"count"`
-	Percentage float64 `json:"percentage"`
-}
-
-type CustomerOrderResponse struct {
-	ID        string  `json:"id"`
-	Date      string  `json:"date"`
-	Total     float64 `json:"total"`
-	Status    string  `json:"status"`
-	ItemCount int     `json:"itemCount"`
-	HasReturn bool    `json:"hasReturn"`
-	Href      string  `json:"href"`
-}
-
-type WishlistItemResponse struct {
-	ID                   string  `json:"id"`
-	ProductName          string  `json:"productName"`
-	Category             string  `json:"category"`
-	Price                float64 `json:"price"`
-	SavedAt              string  `json:"savedAt"`
-	IsConfiguration      bool    `json:"isConfiguration"`
-	ConfigurationSummary *string `json:"configurationSummary,omitempty"`
-}
-
-type CustomerNoteResponse struct {
-	ID        string `json:"id"`
-	Author    string `json:"author"`
-	Body      string `json:"body"`
-	CreatedAt string `json:"createdAt"`
-}
-
-type AuditLogEntryResponse struct {
-	ID           string  `json:"id"`
-	AdminID      string  `json:"adminId"`
-	AdminName    string  `json:"adminName"`
-	Action       string  `json:"action"`
-	TargetUserID string  `json:"targetUserId"`
-	Timestamp    string  `json:"timestamp"`
-	Reason       *string `json:"reason,omitempty"`
-	Details      *string `json:"details,omitempty"`
+	Email         *string                 `json:"email,omitempty"`
+	Job           *string                 `json:"job,omitempty"`
+	Address       *string                 `json:"address,omitempty"`
+	Birthday      *string                 `json:"birthday,omitempty"`
+	MarriageDate  *string                 `json:"marriageDate,omitempty"`
+	ImportantDate *string                 `json:"importantDate,omitempty"`
+	FirstVisitDate *string                `json:"firstVisitDate,omitempty"`
+	Description   *string                 `json:"description,omitempty"`
+	SignatureUrl  *string                 `json:"signatureUrl,omitempty"`
+	ImportProfile ImportProfileResponse     `json:"importProfile"`
 }
 
 type CreateCustomerRequest struct {
-	ImportMode      string                         `json:"importMode"`
-	FullName        string                         `json:"fullName"`
-	Phone           string                         `json:"phone"`
-	Email           string                         `json:"email"`
-	Locale          string                         `json:"locale"`
-	DefaultRingSize string                         `json:"defaultRingSize"`
-	IsVip           bool                           `json:"isVip"`
-	Tags            []string                       `json:"tags"`
-	ImportProfile   *domain.ImportProfileInput     `json:"importProfile"`
+	ImportMode    string                   `json:"importMode"`
+	ImportProfile *ImportProfileRequest    `json:"importProfile"`
 }
 
 type UpdateCustomerRequest struct {
-	FullName        *string                    `json:"fullName"`
-	Phone           *string                    `json:"phone"`
-	Email           *string                    `json:"email"`
-	Locale          *string                    `json:"locale"`
-	DefaultRingSize *string                    `json:"defaultRingSize"`
-	IsVip           *bool                      `json:"isVip"`
-	Tags            *[]string                  `json:"tags"`
-	ImportProfile   *domain.ImportProfileInput `json:"importProfile"`
+	ImportProfile *ImportProfileRequest `json:"importProfile"`
 }
 
-type BlockCustomerRequest struct {
-	Reason string `json:"reason"`
-	Note   string `json:"note"`
-}
-
-type UnblockCustomerRequest struct {
-	Justification string `json:"justification"`
-}
-
-type ToggleTagRequest struct {
-	Tag string `json:"tag"`
-}
-
-type AddNoteRequest struct {
-	Body string `json:"body"`
+type ImportProfileRequest struct {
+	FirstName           string   `json:"firstName"`
+	LastName            string   `json:"lastName"`
+	Job                 *string  `json:"job,omitempty"`
+	Phone               string   `json:"phone"`
+	Email               *string  `json:"email,omitempty"`
+	Address             *string  `json:"address,omitempty"`
+	Birthday            *string  `json:"birthday,omitempty"`
+	MarriageDate        *string  `json:"marriageDate,omitempty"`
+	ImportantDate       *string  `json:"importantDate,omitempty"`
+	FirstVisitDate      *string  `json:"firstVisitDate,omitempty"`
+	Gender              *string  `json:"gender,omitempty"`
+	CustomerType        string   `json:"customerType"`
+	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
+	PurchasedCategories []string `json:"purchasedCategories"`
+	Description         *string  `json:"description,omitempty"`
+	Signature           *string  `json:"signature,omitempty"`
 }
 
 func ToCustomerSummary(row domain.ListRow) CustomerSummaryResponse {
-	domain.NormalizeListRowCRM(&row)
+	domain.NormalizeListRow(&row)
 	id := row.ID.String()
-	resp := CustomerSummaryResponse{
+	return CustomerSummaryResponse{
 		ID:                  id,
 		FullName:            row.FullName,
 		Phone:               row.Phone,
-		ImportProfile:       row.ImportProfile,
-		RegisteredAt:        formatDate(row.RegisteredAt),
-		LastActivityAt:      formatDatePtr(row.LastActivityAt, row.RegisteredAt),
-		TotalOrders:         row.TotalOrders,
-		TotalLtv:            row.TotalLTV,
-		Segment:             string(row.Segment),
-		Status:              row.Status,
-		IsVip:               row.IsVIP,
-		Tags:                row.Tags,
-		CustomerType:        *row.CustomerType,
+		CustomerType:        row.CustomerType,
 		PurchasedCategories: row.PurchasedCategories,
 		CustomerAgeRange:    row.CustomerAgeRange,
 		Gender:              row.Gender,
-		Country:             "IR",
+		CreatedAt:           formatDate(row.CreatedAt),
 		Href:                "/admin/customers/" + id,
 	}
-	if row.LastPurchaseDate != nil {
-		d := formatDate(*row.LastPurchaseDate)
-		resp.LastPurchaseDate = &d
-	}
-	if resp.Tags == nil {
-		resp.Tags = []string{}
-	}
-	if resp.PurchasedCategories == nil {
-		resp.PurchasedCategories = append([]string(nil), domain.DefaultPurchasedCategories...)
-	}
-	return resp
 }
 
-func ToCustomerDetail(d *domain.Detail) CustomerDetailResponse {
-	enrichListRowCRMFromImportProfile(&d.ListRow, d.ImportProfile)
-	summary := ToCustomerSummary(d.ListRow)
-	detail := CustomerDetailResponse{
+func ToCustomerDetail(c *domain.Customer) CustomerDetailResponse {
+	summary := ToCustomerSummary(domain.ListRow{
+		ID:                  c.ID,
+		FullName:            c.FullName(),
+		Phone:               c.Phone,
+		CustomerType:        c.CustomerType,
+		PurchasedCategories: c.PurchasedCategories,
+		CustomerAgeRange:    c.CustomerAgeRange,
+		Gender:              c.Gender,
+		CreatedAt:           c.CreatedAt,
+	})
+
+	profile := toImportProfileResponse(c)
+
+	return CustomerDetailResponse{
 		CustomerSummaryResponse: summary,
-		Email:                   d.Email,
-		Locale:                  d.Locale,
-		DefaultRingSize:         d.DefaultRingSize,
-		AverageOrderValue:       d.AverageOrderValue,
-		VipSource:               vipSourceString(d.VIPSource),
-		TopCategories:           toCategoryInsights(d.TopCategories),
-		WishlistCount:           d.WishlistCount,
-		WishlistAdditions:       d.WishlistAdditions,
-		WishlistRemovals:        d.WishlistRemovals,
-		WishlistConversionRate:  d.WishlistConversionRate,
-		CartAbandonmentCount:    d.CartAbandonmentCount,
-		ConfiguratorUsageCount:  d.ConfiguratorUsageCount,
-		EngagementScore:         d.EngagementScore,
-		RepeatPurchaseRate:      d.RepeatPurchaseRate,
-		PurchaseFrequency:       d.PurchaseFrequency,
-		FunnelPosition:          d.FunnelPosition,
-		Orders:                  toOrders(d.Orders),
-		Wishlist:                toWishlist(d.Wishlist),
-		Notes:                   toNotes(d.Notes),
-		AuditLog:                toAuditLog(d.AuditLog),
+		Email:                   c.Email,
+		Job:                     c.Job,
+		Address:                 c.Address,
+		Birthday:                domain.FormatDate(c.Birthday),
+		MarriageDate:            domain.FormatDate(c.MarriageDate),
+		ImportantDate:           domain.FormatDate(c.ImportantDate),
+		FirstVisitDate:          domain.FormatDate(c.FirstVisitDate),
+		Description:             c.Description,
+		SignatureUrl:            c.SignatureURL,
+		ImportProfile:           profile,
 	}
-	if d.FirstPurchaseDate != nil {
-		fd := formatDate(*d.FirstPurchaseDate)
-		detail.FirstPurchaseDate = &fd
-	}
-	if d.BlockReason != nil {
-		br := string(*d.BlockReason)
-		detail.BlockReason = &br
-	}
-	detail.BlockNote = d.BlockNote
-	if d.ImportMode != nil {
-		im := string(*d.ImportMode)
-		detail.ImportMode = &im
-	}
-	if len(d.ImportProfile) > 0 {
-		detail.ImportProfile = d.ImportProfile
-	}
-	return detail
 }
 
-func enrichListRowCRMFromImportProfile(row *domain.ListRow, importProfile json.RawMessage) {
-	if row == nil || len(importProfile) == 0 {
-		return
-	}
-	var profile struct {
-		CustomerType        string   `json:"customerType"`
-		CustomerAgeRange    string   `json:"customerAgeRange"`
-		Gender              string   `json:"gender"`
-		PurchasedCategories []string `json:"purchasedCategories"`
-	}
-	if err := json.Unmarshal(importProfile, &profile); err != nil {
-		return
-	}
-	if (row.CustomerType == nil || *row.CustomerType == "") && profile.CustomerType != "" {
-		ct := profile.CustomerType
-		row.CustomerType = &ct
-	}
-	if row.CustomerAgeRange == nil && profile.CustomerAgeRange != "" {
-		ar := profile.CustomerAgeRange
-		row.CustomerAgeRange = &ar
-	}
-	if row.Gender == nil && profile.Gender != "" {
-		g := profile.Gender
-		row.Gender = &g
-	}
-	if len(row.PurchasedCategories) == 0 && len(profile.PurchasedCategories) > 0 {
-		row.PurchasedCategories = profile.PurchasedCategories
+func toImportProfileResponse(c *domain.Customer) ImportProfileResponse {
+	sig := c.SignatureURL
+	return ImportProfileResponse{
+		FirstName:           c.FirstName,
+		LastName:            c.LastName,
+		Job:                 c.Job,
+		Phone:               c.Phone,
+		Email:               c.Email,
+		Address:             c.Address,
+		Birthday:            domain.FormatDate(c.Birthday),
+		MarriageDate:        domain.FormatDate(c.MarriageDate),
+		ImportantDate:       domain.FormatDate(c.ImportantDate),
+		FirstVisitDate:      domain.FormatDate(c.FirstVisitDate),
+		Gender:              c.Gender,
+		CustomerType:        c.CustomerType,
+		CustomerAgeRange:    c.CustomerAgeRange,
+		PurchasedCategories: append([]string(nil), c.PurchasedCategories...),
+		Description:         c.Description,
+		Signature:           sig,
 	}
 }
 
@@ -291,121 +184,60 @@ func ToPaginatedCustomers(result domain.ListResult) PaginatedCustomersResponse {
 	}
 }
 
-func (r CreateCustomerRequest) ToInput() appcustomer.CreateInput {
-	return appcustomer.CreateInput{
-		ImportMode:      r.ImportMode,
-		FullName:        r.FullName,
-		Phone:           r.Phone,
-		Email:           r.Email,
-		Locale:          r.Locale,
-		DefaultRingSize: r.DefaultRingSize,
-		IsVIP:           r.IsVip,
-		Tags:            r.Tags,
-		ImportProfile:   r.ImportProfile,
+func (r CreateCustomerRequest) ToInput() (domain.Input, error) {
+	if r.ImportProfile == nil {
+		return domain.Input{}, shared.ErrInvalidInput
 	}
+	return importProfileToInput(*r.ImportProfile)
 }
 
-func (r UpdateCustomerRequest) ToInput() appcustomer.UpdateInput {
-	return appcustomer.UpdateInput{
-		FullName:        r.FullName,
-		Phone:           r.Phone,
-		Email:           r.Email,
-		Locale:          r.Locale,
-		DefaultRingSize: r.DefaultRingSize,
-		IsVIP:           r.IsVip,
-		Tags:            r.Tags,
-		ImportProfile:   r.ImportProfile,
+func (r UpdateCustomerRequest) ToInput() (domain.Input, error) {
+	if r.ImportProfile == nil {
+		return domain.Input{}, shared.ErrInvalidInput
 	}
+	return importProfileToInput(*r.ImportProfile)
 }
 
-func vipSourceString(v *domain.VIPSource) *string {
-	if v == nil {
-		return nil
+func importProfileToInput(p ImportProfileRequest) (domain.Input, error) {
+	birthday, err := domain.ParseDate(p.Birthday)
+	if err != nil {
+		return domain.Input{}, shared.ErrInvalidInput
 	}
-	s := string(*v)
-	return &s
-}
+	marriage, err := domain.ParseDate(p.MarriageDate)
+	if err != nil {
+		return domain.Input{}, shared.ErrInvalidInput
+	}
+	important, err := domain.ParseDate(p.ImportantDate)
+	if err != nil {
+		return domain.Input{}, shared.ErrInvalidInput
+	}
+	firstVisit, err := domain.ParseDate(p.FirstVisitDate)
+	if err != nil {
+		return domain.Input{}, shared.ErrInvalidInput
+	}
 
-func toCategoryInsights(items []domain.CategoryInsight) []CategoryInsightResponse {
-	out := make([]CategoryInsightResponse, 0, len(items))
-	for _, item := range items {
-		out = append(out, CategoryInsightResponse(item))
-	}
-	return out
-}
-
-func toOrders(orders []domain.OrderSummary) []CustomerOrderResponse {
-	out := make([]CustomerOrderResponse, 0, len(orders))
-	for _, o := range orders {
-		id := o.ID.String()
-		out = append(out, CustomerOrderResponse{
-			ID:        id,
-			Date:      formatDate(o.Date),
-			Total:     o.Total,
-			Status:    o.Status,
-			ItemCount: o.ItemCount,
-			HasReturn: o.HasReturn,
-			Href:      "/admin/orders/" + id,
-		})
-	}
-	return out
-}
-
-func toWishlist(items []domain.WishlistSummary) []WishlistItemResponse {
-	out := make([]WishlistItemResponse, 0, len(items))
-	for _, w := range items {
-		out = append(out, WishlistItemResponse{
-			ID:                   w.ID.String(),
-			ProductName:          w.ProductName,
-			Category:             w.Category,
-			Price:                w.Price,
-			SavedAt:              formatDate(w.SavedAt),
-			IsConfiguration:      w.IsConfiguration,
-			ConfigurationSummary: w.ConfigurationSummary,
-		})
-	}
-	return out
-}
-
-func toNotes(notes []domain.Note) []CustomerNoteResponse {
-	out := make([]CustomerNoteResponse, 0, len(notes))
-	for _, n := range notes {
-		out = append(out, CustomerNoteResponse{
-			ID:        n.ID.String(),
-			Author:    n.Author,
-			Body:      n.Body,
-			CreatedAt: n.CreatedAt.UTC().Format(time.RFC3339),
-		})
-	}
-	return out
-}
-
-func toAuditLog(entries []domain.AuditEntry) []AuditLogEntryResponse {
-	out := make([]AuditLogEntryResponse, 0, len(entries))
-	for _, e := range entries {
-		out = append(out, AuditLogEntryResponse{
-			ID:           e.ID.String(),
-			AdminID:      e.AdminID.String(),
-			AdminName:    e.AdminName,
-			Action:       string(e.Action),
-			TargetUserID: e.TargetUserID.String(),
-			Timestamp:    e.CreatedAt.UTC().Format(time.RFC3339),
-			Reason:       e.Reason,
-			Details:      e.Details,
-		})
-	}
-	return out
+	return domain.Input{
+		FirstName:           strings.TrimSpace(p.FirstName),
+		LastName:            strings.TrimSpace(p.LastName),
+		Job:                 p.Job,
+		Phone:               strings.TrimSpace(p.Phone),
+		Email:               p.Email,
+		Address:             p.Address,
+		Birthday:            birthday,
+		MarriageDate:        marriage,
+		ImportantDate:       important,
+		FirstVisitDate:      firstVisit,
+		Gender:              p.Gender,
+		CustomerType:        p.CustomerType,
+		CustomerAgeRange:    p.CustomerAgeRange,
+		PurchasedCategories: append([]string(nil), p.PurchasedCategories...),
+		Description:         p.Description,
+		SignatureURL:        p.Signature,
+	}, nil
 }
 
 func formatDate(t time.Time) string {
 	return t.UTC().Format("2006-01-02")
-}
-
-func formatDatePtr(t *time.Time, fallback time.Time) string {
-	if t != nil {
-		return formatDate(*t)
-	}
-	return formatDate(fallback)
 }
 
 func ParseCustomerID(id string) (shared.ID, error) {

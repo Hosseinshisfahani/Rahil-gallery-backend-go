@@ -59,7 +59,7 @@ func NewApp(deps RouterDeps) *fiber.App {
 	if deps.Pool != nil {
 		tokenProvider := RegisterAuthRoutes(api, deps.Config, postgresAuthWire(deps.Pool))
 		RegisterCatalogRoutes(api, deps.Pool)
-		RegisterAdminCustomerRoutes(api, tokenProvider, postgresAdminCustomerWire(deps.Pool), deps.Config.CustomerSignaturesDir)
+		RegisterAdminCustomerRoutes(api, tokenProvider, deps.Pool, deps.Config.CustomerSignaturesDir)
 		RegisterAdminProductRoutes(api, tokenProvider, deps.Pool)
 		if obsSvc != nil {
 			RegisterObservabilityRoutes(api, tokenProvider, obsSvc, deps.Config)

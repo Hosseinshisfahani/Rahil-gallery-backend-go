@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -42,10 +41,22 @@ func buildCRMProfileJSON(now time.Time, index int) (string, error) {
 	return string(b), err
 }
 
-func (r *Runner) refreshCommerceStats(ctx context.Context) error {
-	log.Println("seed: refreshing customer commerce stats...")
-	_, err := r.pool.Exec(ctx, `SELECT refresh_all_customer_commerce_stats()`)
-	return err
+func optionalBulkGender(gender string) any {
+	if gender == "" {
+		return nil
+	}
+	return gender
+}
+
+func parseBulkDate(value string) any {
+	if value == "" {
+		return nil
+	}
+	t, err := time.Parse("2006-01-02", value)
+	if err != nil {
+		return nil
+	}
+	return t
 }
 
 var variantCatalog = []struct {
@@ -59,6 +70,7 @@ var variantCatalog = []struct {
 }
 
 func (r *Runner) seedBulkCustomers(ctx context.Context, roleCustomer string) error {
+	_ = roleCustomer
 	count := r.opts.bulkCustomerCount()
 	if count == 0 {
 		return nil
@@ -78,59 +90,56 @@ func (r *Runner) seedBulkCustomers(ctx context.Context, roleCustomer string) err
 			return err
 		}
 
-		userRows := make([][]any, 0, end-start+1)
-		profileRows := make([][]any, 0, end-start+1)
+		customerRows := make([][]any, 0, end-start+1)
 
 		for i := start; i <= end; i++ {
-			first, last := pickName(i)
 			registered := bulkRegisteredAt(now, i)
-			lastActivity := bulkLastActivity(now, i)
-			isVIP := bulkIsVIP(i)
-			tags := formatPGTextArray(bulkTags(i))
+			profileJSON, err := buildCRMProfileJSON(now, i)
+			if err != nil {
+				return fmt.Errorf("bulk CRM profile %d: %w", i, err)
+			}
+
+			var p bulkCRMProfile
+			if err := json.Unmarshal([]byte(profileJSON), &p); err != nil {
+				return fmt.Errorf("bulk CRM profile %d: %w", i, err)
+			}
 
 			var email any
 			if i%4 == 0 {
 				email = bulkEmail(i)
 			}
 
-			var vipSource any
-			if isVIP {
-				vipSource = "manual"
-			}
-
-			userRows = append(userRows, []any{
-				bulkCustomerID(i), roleCustomer, email, bulkPhone(i), nil,
-				first, last, bulkUserStatus(i), registered, registered,
-			})
-
-			profileJSON, err := buildCRMProfileJSON(now, i)
-			if err != nil {
-				return fmt.Errorf("bulk CRM profile %d: %w", i, err)
-			}
-			importMode := "history_included"
-			importProfile := profileJSON
-
-			profileRows = append(profileRows, []any{
-				bulkCustomerID(i), bulkLocale(i), nil, isVIP, vipSource,
-				importMode, importProfile, tags, nil, nil, lastActivity, registered, registered,
+			customerRows = append(customerRows, []any{
+				bulkCustomerID(i),
+				p.FirstName,
+				p.LastName,
+				nil,
+				p.Phone,
+				email,
+				nil,
+				parseBulkDate(p.Birthday),
+				parseBulkDate(p.MarriageDate),
+				nil,
+				parseBulkDate(p.FirstVisitDate),
+				optionalBulkGender(p.Gender),
+				p.CustomerType,
+				p.CustomerAgeRange,
+				p.PurchasedCategories,
+				nil,
+				nil,
+				registered,
+				registered,
 			})
 		}
 
-		if err := copyRows(ctx, tx, "users", []string{
-			"id", "role_id", "email", "phone", "password_hash",
-			"first_name", "last_name", "status", "created_at", "updated_at",
-		}, userRows); err != nil {
+		if err := copyRows(ctx, tx, "customers", []string{
+			"id", "first_name", "last_name", "job", "phone", "email", "address",
+			"birthday", "marriage_date", "important_date", "first_visit_date",
+			"gender", "customer_type", "customer_age_range", "purchased_categories",
+			"description", "signature_url", "created_at", "updated_at",
+		}, customerRows); err != nil {
 			tx.Rollback(ctx)
-			return fmt.Errorf("users batch %d-%d: %w", start, end, err)
-		}
-
-		if err := copyRows(ctx, tx, "customer_profiles", []string{
-			"user_id", "locale", "default_ring_size", "is_vip", "vip_source",
-			"import_mode", "import_profile", "tags", "block_reason", "block_note",
-			"last_activity_at", "created_at", "updated_at",
-		}, profileRows); err != nil {
-			tx.Rollback(ctx)
-			return fmt.Errorf("profiles batch %d-%d: %w", start, end, err)
+			return fmt.Errorf("customers batch %d-%d: %w", start, end, err)
 		}
 
 		if err := tx.Commit(ctx); err != nil {
@@ -163,12 +172,10 @@ func (r *Runner) seedBulkCommerce(ctx context.Context) error {
 
 	log.Printf("seed: inserting ~%d bulk orders and wishlist items...", orderCount)
 
-	if _, err := r.pool.Exec(ctx, `ALTER TABLE orders DISABLE TRIGGER trg_orders_sync_commerce_stats`); err != nil {
-		return fmt.Errorf("disable commerce trigger: %w", err)
+	roles, err := r.loadRoles(ctx)
+	if err != nil {
+		return err
 	}
-	defer func() {
-		_, _ = r.pool.Exec(context.Background(), `ALTER TABLE orders ENABLE TRIGGER trg_orders_sync_commerce_stats`)
-	}()
 
 	now := time.Now().UTC()
 	orderSeq := 0
@@ -182,8 +189,16 @@ func (r *Runner) seedBulkCommerce(ctx context.Context) error {
 		var orderRows [][]any
 		var itemRows [][]any
 		var wishlistRows [][]any
+		var userStubRows [][]any
 
 		for i := start; i <= end; i++ {
+			if bulkHasWishlist(i) || bulkHasOrder(i) || bulkHasSecondOrder(i) {
+				first, last := pickName(i)
+				userStubRows = append(userStubRows, []any{
+					bulkCustomerID(i), roles.customer, first, last, "active", now, now,
+				})
+			}
+
 			if bulkHasWishlist(i) {
 				v := variantCatalog[bulkVariantIndex(i)]
 				wishlistRows = append(wishlistRows, []any{
@@ -208,6 +223,15 @@ func (r *Runner) seedBulkCommerce(ctx context.Context) error {
 		tx, err := r.pool.Begin(ctx)
 		if err != nil {
 			return err
+		}
+
+		if len(userStubRows) > 0 {
+			if err := copyRows(ctx, tx, "users", []string{
+				"id", "role_id", "first_name", "last_name", "status", "created_at", "updated_at",
+			}, userStubRows); err != nil {
+				tx.Rollback(ctx)
+				return err
+			}
 		}
 
 		if len(orderRows) > 0 {
@@ -243,7 +267,7 @@ func (r *Runner) seedBulkCommerce(ctx context.Context) error {
 	}
 
 	log.Printf("seed:   orders inserted: %d", orderSeq)
-	return r.refreshCommerceStats(ctx)
+	return nil
 }
 
 func appendBulkOrder(orders, items [][]any, customerIndex, orderSeq int, now time.Time, second bool) ([][]any, [][]any) {
@@ -276,15 +300,4 @@ func copyRows(ctx context.Context, tx pgx.Tx, table string, columns []string, ro
 	}
 	_, err := tx.CopyFrom(ctx, pgx.Identifier{table}, columns, pgx.CopyFromRows(rows))
 	return err
-}
-
-func formatPGTextArray(values []string) string {
-	if len(values) == 0 {
-		return "{}"
-	}
-	quoted := make([]string, len(values))
-	for i, v := range values {
-		quoted[i] = `"` + strings.ReplaceAll(v, `"`, `\"`) + `"`
-	}
-	return "{" + strings.Join(quoted, ",") + "}"
 }

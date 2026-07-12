@@ -12,7 +12,7 @@ export GOPROXY
 
 .PHONY: test test-unit test-bdd test-feature test-integration \
 	migrate-up migrate-down migrate-create migrate-up-local \
-	seed seed-reset seed-small seed-products seed-prod seed-prod-password seed-backfill-crm fetch-catalog-images \
+	seed seed-reset seed-small seed-products seed-prod seed-prod-password fetch-catalog-images \
 	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-prod-migrate docker-prod-api docker-observability-up docker-logs docker-migrate \
 	run dev dev-check run-docker stop-api run-vendor build-linux run-binary
 
@@ -42,10 +42,8 @@ build-linux:
 build-prod-tools:
 	@mkdir -p bin
 	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/seed-prod ./cmd/seed-prod
-	GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/backfill-crm ./cmd/backfill-crm
 
 PROD_SEED_CMD = $(if $(wildcard bin/seed-prod),./bin/seed-prod,go run ./cmd/seed-prod)
-BACKFILL_CRM_CMD = $(if $(wildcard bin/backfill-crm),./bin/backfill-crm,go run ./cmd/backfill-crm)
 
 run-binary:
 	./bin/rahil-api
@@ -154,9 +152,6 @@ seed-prod:
 
 seed-prod-password:
 	DATABASE_URL="$(DATABASE_URL)" $(PROD_SEED_CMD) --update-password
-
-seed-backfill-crm:
-	DATABASE_URL="$(DATABASE_URL)" $(BACKFILL_CRM_CMD)
 
 fetch-catalog-images:
 	bash scripts/fetch-catalog-images.sh

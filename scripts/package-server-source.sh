@@ -14,7 +14,7 @@ echo "==> Archiving git tree at HEAD"
 git archive --format=tar HEAD | tar -x -C "${STAGING}"
 
 mkdir -p "${STAGING}/bin"
-for bin in seed-prod backfill-crm; do
+for bin in seed-prod; do
   if [[ -f "bin/${bin}" ]]; then
     cp "bin/${bin}" "${STAGING}/bin/${bin}"
   else

@@ -66,7 +66,6 @@ jobs:
         run: |
           mkdir -p bin
           GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/seed-prod ./cmd/seed-prod
-          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o bin/backfill-crm ./cmd/backfill-crm
 
       - name: Save image tarball
         run: docker save ${{ env.IMAGE_NAME }}:${{ github.sha }} | gzip > api-image.tar.gz
@@ -100,7 +99,7 @@ jobs:
                --exclude '.env' \
                --exclude 'data/' \
                \"\$STAGING/\" \"${SERVER_DEPLOY_PATH}/\"
-             chmod +x \"${SERVER_DEPLOY_PATH}/bin/seed-prod\" \"${SERVER_DEPLOY_PATH}/bin/backfill-crm\" 2>/dev/null || true
+             chmod +x \"${SERVER_DEPLOY_PATH}/bin/seed-prod\" 2>/dev/null || true
              rm -f /tmp/server-source.tar.gz
              echo \"==> Server source synced to ${SERVER_DEPLOY_PATH} (\$(cat \"${SERVER_DEPLOY_PATH}/.deploy-sha\" 2>/dev/null || echo unknown))\""
         env:

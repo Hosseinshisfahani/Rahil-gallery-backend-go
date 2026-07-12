@@ -9,9 +9,6 @@ func TestListFilter_HasAdvancedFilters(t *testing.T) {
 	if !(ListFilter{Email: "a@b.com"}).HasAdvancedFilters() {
 		t.Fatal("email is advanced")
 	}
-	if !(ListFilter{Segment: "vip"}).HasAdvancedFilters() {
-		t.Fatal("segment is advanced")
-	}
 	if !(ListFilter{CustomerAgeRange: "21-40"}).HasAdvancedFilters() {
 		t.Fatal("age range is advanced")
 	}
