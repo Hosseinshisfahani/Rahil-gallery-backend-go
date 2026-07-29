@@ -17,6 +17,8 @@ type Customer struct {
 	Phone               string
 	Email               *string
 	Address             *string
+	MelliCode           *string
+	PostalCode          *string
 	Birthday            *time.Time
 	MarriageDate        *time.Time
 	ImportantDate       *time.Time
@@ -26,6 +28,7 @@ type Customer struct {
 	CustomerAgeRange    *string
 	PurchasedCategories []string
 	Description         *string
+	MarketerNote        *string
 	SignatureURL        *string
 	CreatedAt           time.Time
 	UpdatedAt           time.Time
@@ -99,6 +102,8 @@ type Input struct {
 	Phone               string
 	Email               *string
 	Address             *string
+	MelliCode           *string
+	PostalCode          *string
 	Birthday            *time.Time
 	MarriageDate        *time.Time
 	ImportantDate       *time.Time
@@ -108,6 +113,7 @@ type Input struct {
 	CustomerAgeRange    *string
 	PurchasedCategories []string
 	Description         *string
+	MarketerNote        *string
 	SignatureURL        *string
 }
 
@@ -128,6 +134,22 @@ func NormalizeInput(in *Input) {
 		in.CustomerType = DefaultCustomerType
 	}
 	in.Phone = strings.TrimSpace(NormalizeDigits(in.Phone))
+	if in.MelliCode != nil {
+		v := strings.TrimSpace(NormalizeDigits(*in.MelliCode))
+		if v == "" {
+			in.MelliCode = nil
+		} else {
+			in.MelliCode = &v
+		}
+	}
+	if in.PostalCode != nil {
+		v := strings.TrimSpace(NormalizeDigits(*in.PostalCode))
+		if v == "" {
+			in.PostalCode = nil
+		} else {
+			in.PostalCode = &v
+		}
+	}
 	in.PurchasedCategories = StringSliceOrEmpty(in.PurchasedCategories)
 }
 

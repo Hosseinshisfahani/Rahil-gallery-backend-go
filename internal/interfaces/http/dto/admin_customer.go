@@ -41,6 +41,8 @@ type ImportProfileResponse struct {
 	Phone               string   `json:"phone"`
 	Email               *string  `json:"email,omitempty"`
 	Address             *string  `json:"address,omitempty"`
+	MelliCode           *string  `json:"melliCode,omitempty"`
+	PostalCode          *string  `json:"postalCode,omitempty"`
 	Birthday            *string  `json:"birthday,omitempty"`
 	MarriageDate        *string  `json:"marriageDate,omitempty"`
 	ImportantDate       *string  `json:"importantDate,omitempty"`
@@ -50,6 +52,7 @@ type ImportProfileResponse struct {
 	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
 	PurchasedCategories []string `json:"purchasedCategories"`
 	Description         *string  `json:"description,omitempty"`
+	MarketerNote        *string  `json:"marketerNote,omitempty"`
 	Signature           *string  `json:"signature,omitempty"`
 }
 
@@ -58,11 +61,14 @@ type CustomerDetailResponse struct {
 	Email         *string                 `json:"email,omitempty"`
 	Job           *string                 `json:"job,omitempty"`
 	Address       *string                 `json:"address,omitempty"`
+	MelliCode     *string                 `json:"melliCode,omitempty"`
+	PostalCode    *string                 `json:"postalCode,omitempty"`
 	Birthday      *string                 `json:"birthday,omitempty"`
 	MarriageDate  *string                 `json:"marriageDate,omitempty"`
 	ImportantDate *string                 `json:"importantDate,omitempty"`
 	FirstVisitDate *string                `json:"firstVisitDate,omitempty"`
 	Description   *string                 `json:"description,omitempty"`
+	MarketerNote  *string                 `json:"marketerNote,omitempty"`
 	SignatureUrl  *string                 `json:"signatureUrl,omitempty"`
 	ImportProfile ImportProfileResponse     `json:"importProfile"`
 }
@@ -83,6 +89,8 @@ type ImportProfileRequest struct {
 	Phone               string   `json:"phone"`
 	Email               *string  `json:"email,omitempty"`
 	Address             *string  `json:"address,omitempty"`
+	MelliCode           *string  `json:"melliCode,omitempty"`
+	PostalCode          *string  `json:"postalCode,omitempty"`
 	Birthday            *string  `json:"birthday,omitempty"`
 	MarriageDate        *string  `json:"marriageDate,omitempty"`
 	ImportantDate       *string  `json:"importantDate,omitempty"`
@@ -92,6 +100,7 @@ type ImportProfileRequest struct {
 	CustomerAgeRange    *string  `json:"customerAgeRange,omitempty"`
 	PurchasedCategories []string `json:"purchasedCategories"`
 	Description         *string  `json:"description,omitempty"`
+	MarketerNote        *string  `json:"marketerNote,omitempty"`
 	Signature           *string  `json:"signature,omitempty"`
 }
 
@@ -130,11 +139,14 @@ func ToCustomerDetail(c *domain.Customer) CustomerDetailResponse {
 		Email:                   c.Email,
 		Job:                     c.Job,
 		Address:                 c.Address,
+		MelliCode:               c.MelliCode,
+		PostalCode:              c.PostalCode,
 		Birthday:                domain.FormatDate(c.Birthday),
 		MarriageDate:            domain.FormatDate(c.MarriageDate),
 		ImportantDate:           domain.FormatDate(c.ImportantDate),
 		FirstVisitDate:          domain.FormatDate(c.FirstVisitDate),
 		Description:             c.Description,
+		MarketerNote:            c.MarketerNote,
 		SignatureUrl:            c.SignatureURL,
 		ImportProfile:           profile,
 	}
@@ -149,6 +161,8 @@ func toImportProfileResponse(c *domain.Customer) ImportProfileResponse {
 		Phone:               c.Phone,
 		Email:               c.Email,
 		Address:             c.Address,
+		MelliCode:           c.MelliCode,
+		PostalCode:          c.PostalCode,
 		Birthday:            domain.FormatDate(c.Birthday),
 		MarriageDate:        domain.FormatDate(c.MarriageDate),
 		ImportantDate:       domain.FormatDate(c.ImportantDate),
@@ -158,6 +172,7 @@ func toImportProfileResponse(c *domain.Customer) ImportProfileResponse {
 		CustomerAgeRange:    c.CustomerAgeRange,
 		PurchasedCategories: domain.StringSliceOrEmpty(c.PurchasedCategories),
 		Description:         c.Description,
+		MarketerNote:        c.MarketerNote,
 		Signature:           sig,
 	}
 }
@@ -223,6 +238,8 @@ func importProfileToInput(p ImportProfileRequest) (domain.Input, error) {
 		Phone:               strings.TrimSpace(p.Phone),
 		Email:               p.Email,
 		Address:             p.Address,
+		MelliCode:           p.MelliCode,
+		PostalCode:          p.PostalCode,
 		Birthday:            birthday,
 		MarriageDate:        marriage,
 		ImportantDate:       important,
@@ -232,6 +249,7 @@ func importProfileToInput(p ImportProfileRequest) (domain.Input, error) {
 		CustomerAgeRange:    p.CustomerAgeRange,
 		PurchasedCategories: domain.StringSliceOrEmpty(p.PurchasedCategories),
 		Description:         p.Description,
+		MarketerNote:        p.MarketerNote,
 		SignatureURL:        p.Signature,
 	}, nil
 }

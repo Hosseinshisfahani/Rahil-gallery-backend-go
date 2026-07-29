@@ -128,9 +128,10 @@ func (r *Repository) Get(ctx context.Context, id shared.ID) (*domain.Customer, e
 	const q = `
 SELECT
   id, first_name, last_name, job, phone, email, address,
+  melli_code, postal_code,
   birthday, marriage_date, important_date, first_visit_date,
   gender, customer_type, customer_age_range, purchased_categories,
-  description, signature_url, created_at, updated_at
+  description, marketer_note, signature_url, created_at, updated_at
 FROM customers
 WHERE id = $1 AND deleted_at IS NULL`
 
@@ -193,14 +194,16 @@ func (r *Repository) Create(ctx context.Context, customer *domain.Customer) erro
 	const q = `
 INSERT INTO customers (
   id, first_name, last_name, job, phone, email, address,
+  melli_code, postal_code,
   birthday, marriage_date, important_date, first_visit_date,
   gender, customer_type, customer_age_range, purchased_categories,
-  description, signature_url, created_at, updated_at
+  description, marketer_note, signature_url, created_at, updated_at
 ) VALUES (
   $1, $2, $3, $4, $5, $6, $7,
-  $8, $9, $10, $11,
-  $12, $13, $14, $15,
-  $16, $17, $18, $19
+  $8, $9,
+  $10, $11, $12, $13,
+  $14, $15, $16, $17,
+  $18, $19, $20, $21, $22
 )`
 
 	_, err := r.pool.Exec(ctx, q,
@@ -211,6 +214,8 @@ INSERT INTO customers (
 		customer.Phone,
 		customer.Email,
 		customer.Address,
+		customer.MelliCode,
+		customer.PostalCode,
 		customer.Birthday,
 		customer.MarriageDate,
 		customer.ImportantDate,
@@ -220,6 +225,7 @@ INSERT INTO customers (
 		customer.CustomerAgeRange,
 		customer.PurchasedCategories,
 		customer.Description,
+		customer.MarketerNote,
 		customer.SignatureURL,
 		customer.CreatedAt,
 		customer.UpdatedAt,
@@ -236,17 +242,20 @@ UPDATE customers SET
   phone = $5,
   email = $6,
   address = $7,
-  birthday = $8,
-  marriage_date = $9,
-  important_date = $10,
-  first_visit_date = $11,
-  gender = $12,
-  customer_type = $13,
-  customer_age_range = $14,
-  purchased_categories = $15,
-  description = $16,
-  signature_url = $17,
-  updated_at = $18
+  melli_code = $8,
+  postal_code = $9,
+  birthday = $10,
+  marriage_date = $11,
+  important_date = $12,
+  first_visit_date = $13,
+  gender = $14,
+  customer_type = $15,
+  customer_age_range = $16,
+  purchased_categories = $17,
+  description = $18,
+  marketer_note = $19,
+  signature_url = $20,
+  updated_at = $21
 WHERE id = $1 AND deleted_at IS NULL`
 
 	tag, err := r.pool.Exec(ctx, q,
@@ -257,6 +266,8 @@ WHERE id = $1 AND deleted_at IS NULL`
 		customer.Phone,
 		customer.Email,
 		customer.Address,
+		customer.MelliCode,
+		customer.PostalCode,
 		customer.Birthday,
 		customer.MarriageDate,
 		customer.ImportantDate,
@@ -266,6 +277,7 @@ WHERE id = $1 AND deleted_at IS NULL`
 		customer.CustomerAgeRange,
 		customer.PurchasedCategories,
 		customer.Description,
+		customer.MarketerNote,
 		customer.SignatureURL,
 		customer.UpdatedAt,
 	)
@@ -306,6 +318,8 @@ func scanCustomer(row scannable) (*domain.Customer, error) {
 		&c.Phone,
 		&c.Email,
 		&c.Address,
+		&c.MelliCode,
+		&c.PostalCode,
 		&c.Birthday,
 		&c.MarriageDate,
 		&c.ImportantDate,
@@ -315,6 +329,7 @@ func scanCustomer(row scannable) (*domain.Customer, error) {
 		&c.CustomerAgeRange,
 		&c.PurchasedCategories,
 		&c.Description,
+		&c.MarketerNote,
 		&c.SignatureURL,
 		&c.CreatedAt,
 		&c.UpdatedAt,
