@@ -6,8 +6,8 @@
 #   bash scripts/setup-cicd.sh \
 #     --host 46.249.101.208 \
 #     --user root \
-#     --server-path /root/source/Rahil-Gallery-Server \
-#     --client-path /root/source/Rahil-Gallery-Client
+#     --server-path /root/source/Rahil-gallery-backend-go \
+#     --client-path /root/source/Rahil-gallery-frontend
 #
 # Optional: install the public key on the VPS automatically:
 #   bash scripts/setup-cicd.sh ... --install-key-on-server
@@ -15,8 +15,8 @@ set -euo pipefail
 
 HOST=""
 USER="root"
-SERVER_PATH="/root/source/Rahil-Gallery-Server"
-CLIENT_PATH="/root/source/Rahil-Gallery-Client"
+SERVER_PATH="/root/source/Rahil-gallery-backend-go"
+CLIENT_PATH="/root/source/Rahil-gallery-frontend"
 INSTALL_KEY=false
 GITHUB_OWNER="${GITHUB_OWNER:-aliakbarebrahimy}"
 KEY_PATH="${DEPLOY_KEY_PATH:-$HOME/.ssh/rahil_github_deploy}"

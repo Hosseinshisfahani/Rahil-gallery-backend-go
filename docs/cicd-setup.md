@@ -15,7 +15,7 @@ Deploy includes API health check and optional chained client deploy via `REPO_DI
 - `SSH_PRIVATE_KEY` — deploy key (private)
 - `SSH_HOST` — e.g. `46.249.101.208`
 - `SSH_USER` — e.g. `root`
-- `SERVER_DEPLOY_PATH` — e.g. `/root/source/Rahil-Gallery-Server`
+- `SERVER_DEPLOY_PATH` — e.g. `/root/source/Rahil-gallery-backend-go`
 - `REPO_DISPATCH_TOKEN` — (optional) GitHub PAT with `repo` scope to auto-deploy the client after API deploy
 
 ## First-time VPS

@@ -30,10 +30,12 @@ Jewelry e-commerce REST API built with **Go 1.22**, **Fiber v2**, **PostgreSQL**
 |------|--------|
 | Module | `github.com/rahil-gallery/rahil-gallery-server` |
 | HTTP framework | [Fiber](https://gofiber.io/) |
-| Database | PostgreSQL 16 |
+| Database | PostgreSQL 16 (shared with Rahil-gallery-backend-django) |
 | Auth | JWT access tokens + opaque refresh tokens (DB-backed) |
 | Default currency | IRR |
 | API prefix | `/api/v1` |
+
+**Strangler Fig:** Commerce tables (`carts`, `orders`, `payments`, `coupons`, …) are owned by Django after the freeze. See [strangler-fig-ownership.md](strangler-fig-ownership.md). Go continues to own Auth, CRM customers, and catalog.
 
 **Current implementation status**
 

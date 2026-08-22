@@ -3,8 +3,8 @@
 # Usage:
 #   bash scripts/bundle-api-binary.sh
 #   scp /tmp/rahil-api-linux.tar.gz root@YOUR_SERVER:/tmp/
-#   ssh root@YOUR_SERVER 'mkdir -p ~/source/Rahil-Gallery-Server/bin && tar -xzf /tmp/rahil-api-linux.tar.gz -C ~/source/Rahil-Gallery-Server && chmod +x ~/source/Rahil-Gallery-Server/bin/rahil-api'
-#   ssh root@YOUR_SERVER 'cd ~/source/Rahil-Gallery-Server && make docker-dev && ./bin/rahil-api'
+#   ssh root@YOUR_SERVER 'mkdir -p ~/source/Rahil-gallery-backend-go/bin && tar -xzf /tmp/rahil-api-linux.tar.gz -C ~/source/Rahil-gallery-backend-go && chmod +x ~/source/Rahil-gallery-backend-go/bin/rahil-api'
+#   ssh root@YOUR_SERVER 'cd ~/source/Rahil-gallery-backend-go && make docker-dev && ./bin/rahil-api'
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

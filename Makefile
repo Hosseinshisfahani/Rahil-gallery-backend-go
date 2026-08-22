@@ -14,7 +14,12 @@ export GOPROXY
 	migrate-up migrate-down migrate-create migrate-up-local \
 	seed seed-reset seed-small seed-products seed-prod seed-prod-password fetch-catalog-images \
 	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-prod-migrate docker-prod-api docker-observability-up docker-logs docker-migrate \
-	run dev dev-check run-docker stop-api run-vendor build-linux run-binary
+	run dev dev-check run-docker stop-api run-vendor build-linux run-binary \
+	check-ownership
+
+# Strangler Fig: block new Go migrations that touch Django-owned commerce tables
+check-ownership:
+	bash scripts/check_migration_ownership.sh go
 
 # Local API on :8081 by default (requires: make docker-dev)
 dev-check:
