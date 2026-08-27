@@ -1,154 +1,146 @@
-# Rahil Gallery Server
+# Rahil Gallery Backend (Go)
 
 Jewelry e-commerce API — Go, [Fiber](https://gofiber.io/), DDD / Clean Architecture.
 
-**Full technical workflow:** [docs/technical-workflow.md](docs/technical-workflow.md) — architecture, auth flow, Docker, DB, testing, API reference.
+This service owns **auth**, **CRM customers**, and **catalog**. Commerce HTTP APIs (cart, orders, payments, promotions) live in [Rahil-gallery-backend-django](../Rahil-gallery-backend-django). Both share the `rahil_gallery` PostgreSQL database and the same `JWT_ACCESS_SECRET`.
+
+The Next.js app in [Rahil-gallery-frontend](../Rahil-gallery-frontend) proxies `/api/v1` to this process (default `:8081`) except commerce prefixes, which go to Django.
+
+**Full technical workflow:** [docs/technical-workflow.md](docs/technical-workflow.md)
+
+## Local development (recommended)
+
+Postgres on host `:5433`, API on host `:8081` — matches the frontend `.env.example`.
+
+```bash
+cp .env.example .env   # set JWT_ACCESS_SECRET (share with Django)
+make docker-dev        # Postgres + golang-migrate
+make dev               # API on :8081
+```
+
+Health: `GET http://localhost:8081/health`
+
+Optional seed data (after migrations):
+
+```bash
+make fetch-catalog-images
+make seed-small
+```
 
 ## Project layout
 
 ```
 ├── cmd/api/                 # HTTP entrypoint (Fiber)
 ├── internal/
-│   ├── domain/              # Entities & domain types (per bounded context)
-│   ├── application/         # Use cases / services
-│   ├── infrastructure/      # DB, cache, external gateways
+│   ├── domain/              # Entities & ports (per bounded context)
+│   ├── application/         # Use cases
+│   ├── infrastructure/      # Postgres, JWT, static files
 │   └── interfaces/          # HTTP handlers, DTOs, middleware
-├── migrations/              # PostgreSQL schema
-└── docs/                    # Technical docs (workflow, schema, testing)
+├── migrations/              # golang-migrate (Go-owned schema)
+└── docs/
 ```
 
-## Database schema
+Do not add new Go migrations that `CREATE` / `ALTER` / `DROP` Django-owned commerce tables. See [docs/strangler-fig-ownership.md](docs/strangler-fig-ownership.md). `make check-ownership` enforces this.
 
-Initial migration: `migrations/000001_init_schema.up.sql`
+## Configuration
 
-Full ER overview and context map: [docs/database-schema.md](docs/database-schema.md)
+See `.env.example`.
 
-Customer list performance: [docs/customer-list-performance.md](docs/customer-list-performance.md)
-
-```bash
-# Example: apply schema (Docker Postgres + migrate image)
-make docker-dev
-make migrate-up
-```
-
-## Domain packages
-
-| Context   | Package                      |
-|-----------|------------------------------|
-| Identity  | `internal/domain/identity`   |
-| Catalog   | `internal/domain/catalog`    |
-| Inventory | `internal/domain/inventory`  |
-| Cart      | `internal/domain/cart`       |
-| Order     | `internal/domain/order`      |
-| Payment   | `internal/domain/payment`    |
-| Promotion | `internal/domain/promotion`  |
-| Review    | `internal/domain/review`     |
-| Wishlist  | `internal/domain/wishlist`   |
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `APP_PORT` | `8081` | Listen port for `make dev` |
+| `POSTGRES_PORT` | `5433` | Host port for `make docker-dev` |
+| `DATABASE_URL` | `postgres://postgres:postgres@127.0.0.1:5433/rahil_gallery?sslmode=disable` | API database |
+| `JWT_ACCESS_SECRET` | — | HS256 secret; **must match Django** |
+| `JWT_ACCESS_TTL` | `15m` | Access token lifetime |
+| `JWT_REFRESH_TTL` | `168h` | Refresh token lifetime |
 
 ## Docker Compose
 
-**Full stack** (Postgres + migrations + API):
+**DB only** (API on the host with `make dev`) is the usual local setup, above.
+
+**Full stack** (Postgres + migrations + API in Compose). Compose publishes the API on `${APP_PORT:-8080}`:
 
 ```bash
 cp .env.example .env
 docker compose up -d --build
-# API: http://localhost:8080
+# API: http://localhost:8080  (or APP_PORT from .env)
 ```
 
-**DB only** (run API on host with `go run`):
-
 ```bash
-make docker-dev
-make run
-# API: http://localhost:8080
+make docker-up       # build & start all services
+make docker-down     # stop and remove containers
+make docker-logs     # follow API logs
+make docker-migrate  # re-run migrations
 ```
 
-`make run` loads `.env` automatically (including `DATABASE_URL` on port 5432).
-
-Useful commands:
+If `docker compose build` fails with `403` on `proxy.golang.org`:
 
 ```bash
-make docker-up      # build & start all services
-make docker-down    # stop and remove containers
-make docker-logs    # follow API logs
-make docker-migrate # re-run migrations
-```
-
-**Docker build fails with `403` on `proxy.golang.org` (VPN):** use an alternate proxy or vendor modules:
-
-```bash
-# Option A: alternate GOPROXY (try with VPN on or off)
 GOPROXY=https://goproxy.io,direct docker compose build api
-GOPROXY=https://goproxy.cn,direct docker compose build api
-
-# Option B: vendor on host (while go modules download works), then offline Docker build
+# or vendor on the host, then:
 make docker-up-vendor
 ```
 
-## Run the API (without Docker)
+## API surface
 
-```bash
-cp .env.example .env
-# edit DATABASE_URL if needed
+| Area | Status | Docs |
+|------|--------|------|
+| Auth (register, login, refresh, logout, me) | Live | below |
+| Admin customers CRM | Live | [docs/admin-customers-api.md](docs/admin-customers-api.md) |
+| Catalog (public + admin products) | Live | [docs/catalog-api.md](docs/catalog-api.md), [docs/admin-products-api.md](docs/admin-products-api.md) |
+| Cart / orders / payments | Django | [Rahil-gallery-backend-django](../Rahil-gallery-backend-django) |
 
-go mod tidy
-go run ./cmd/api
-```
+Prefix: `/api/v1`. Envelope: `{ "success": true, "data": … }` or `{ "success": false, "error": { "code", "message" } }`.
 
-Endpoints:
+### Health
 
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/health` | Liveness |
 | GET | `/health/ready` | DB readiness |
-| GET | `/api/v1/` | API info |
 
 ### Auth (JWT)
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | POST | `/api/v1/auth/register` | — | Register customer account |
-| POST | `/api/v1/auth/login` | — | Login, returns access + refresh tokens |
+| POST | `/api/v1/auth/login` | — | Access + refresh tokens |
 | POST | `/api/v1/auth/refresh` | — | Rotate refresh token |
-| POST | `/api/v1/auth/logout` | — | Revoke refresh token (body: `refresh_token`) |
-| GET | `/api/v1/auth/me` | Bearer JWT | Current user profile |
+| POST | `/api/v1/auth/logout` | — | Revoke refresh token |
+| GET | `/api/v1/auth/me` | Bearer | Current user |
 
-Password rules: min 8 chars, at least one letter and one digit.
+Password rules: min 8 characters, at least one letter and one digit.
 
 ```bash
-# Register
-curl -s -X POST http://localhost:8080/api/v1/auth/register \
+curl -s -X POST http://localhost:8081/api/v1/auth/register \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"Secret12","first_name":"Ali","last_name":"Rahil"}'
 
-# Login
-curl -s -X POST http://localhost:8080/api/v1/auth/login \
+curl -s -X POST http://localhost:8081/api/v1/auth/login \
   -H 'Content-Type: application/json' \
   -d '{"email":"user@example.com","password":"Secret12"}'
 
-# Me (replace TOKEN)
-curl -s http://localhost:8080/api/v1/auth/me -H "Authorization: Bearer TOKEN"
+curl -s http://localhost:8081/api/v1/auth/me -H "Authorization: Bearer TOKEN"
 ```
 
-## Repository ports (domain)
-
-Interfaces live next to each context, e.g. `internal/domain/catalog/repository.go`.  
-Postgres implementations go under `internal/infrastructure/persistence/postgres/`.
+Refresh tokens stay on this service. Django only **verifies** access JWTs.
 
 ## Testing
 
 See [docs/testing.md](docs/testing.md).
 
 ```bash
-go mod tidy
-make test          # all packages (unit + bdd + feature)
-make test-unit     # TDD unit tests
-make test-bdd      # Gherkin scenarios
-make test-feature  # HTTP feature tests
+make test          # unit + bdd + feature
+make test-unit
+make test-bdd
+make test-feature
+make check-ownership
 ```
 
-## Next steps
+## Further reading
 
-- Implement Postgres repositories per port
-- Application use cases (auth, catalog, cart, checkout)
-- JWT middleware and route groups under `/api/v1`
+- [docs/technical-workflow.md](docs/technical-workflow.md) — architecture, auth, Docker, DB
+- [docs/database-schema.md](docs/database-schema.md) — ER and context map
+- [docs/strangler-fig-ownership.md](docs/strangler-fig-ownership.md) — table freeze
+- [docs/cicd-setup.md](docs/cicd-setup.md) — GitHub Actions → VPS

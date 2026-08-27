@@ -12,6 +12,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/google/uuid"
 	appcustomer "github.com/rahil-gallery/rahil-gallery-server/internal/application/customer"
+	appsms "github.com/rahil-gallery/rahil-gallery-server/internal/application/sms"
 	domain "github.com/rahil-gallery/rahil-gallery-server/internal/domain/customer"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/shared"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/storage/customersignature"
@@ -19,11 +20,12 @@ import (
 )
 
 type AdminCustomerHandler struct {
-	svc *appcustomer.Service
+	svc     *appcustomer.Service
+	bulkSMS *appsms.BulkService
 }
 
-func NewAdminCustomerHandler(svc *appcustomer.Service) *AdminCustomerHandler {
-	return &AdminCustomerHandler{svc: svc}
+func NewAdminCustomerHandler(svc *appcustomer.Service, bulkSMS *appsms.BulkService) *AdminCustomerHandler {
+	return &AdminCustomerHandler{svc: svc, bulkSMS: bulkSMS}
 }
 
 func (h *AdminCustomerHandler) List(c *fiber.Ctx) error {

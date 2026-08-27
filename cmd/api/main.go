@@ -9,8 +9,11 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
+	appsms "github.com/rahil-gallery/rahil-gallery-server/internal/application/sms"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/config"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres"
+	customerpg "github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres/customer"
+	infrasms "github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/sms"
 	httpx "github.com/rahil-gallery/rahil-gallery-server/internal/interfaces/http"
 )
 
@@ -22,6 +25,18 @@ func main() {
 
 	ctx := context.Background()
 	var pool = connectDatabase(ctx, cfg.DatabaseURL)
+
+	smsProvider := infrasms.NewProvider(cfg)
+	birthdayRunner := &appsms.BirthdayRunner{
+		Customers: customerpg.NewRepository(pool),
+		SMS:       smsProvider,
+		Template:  cfg.KavenegarBirthdayTemplate,
+	}
+	stopCron, err := appsms.StartBirthdayCron(ctx, birthdayRunner, cfg.SMSBirthdayCron, cfg.SMSBirthdayTZ)
+	if err != nil {
+		log.Fatalf("birthday cron: %v", err)
+	}
+	defer stopCron()
 
 	app := httpx.NewApp(httpx.RouterDeps{Pool: pool, Config: cfg})
 

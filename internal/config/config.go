@@ -33,6 +33,15 @@ type Config struct {
 	ObservabilityRetentionDays int
 	MetricsEnabled             bool
 	MetricsServiceName         string
+	// Kavenegar / SMS
+	KavenegarAPIKey           string
+	KavenegarSender           string
+	KavenegarBirthdayTemplate string
+    KavenegarEnabled          bool
+    SMSBirthdayCron           string
+    SMSBirthdayTZ             string
+    SMSBulkBatchSize          int
+    SMSBulkMaxConcurrency     int
 }
 
 func Load() (Config, error) {
@@ -66,6 +75,15 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("invalid OBSERVABILITY_RETENTION_DAYS: %w", err)
 	}
 
+	bulkBatchSize, err := strconv.Atoi(getEnv("SMS_BULK_BATCH_SIZE", "200"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid SMS_BULK_BATCH_SIZE: %w", err)
+	}
+	bulkMaxConcurrency, err := strconv.Atoi(getEnv("SMS_BULK_MAX_CONCURRENCY", "3"))
+	if err != nil {
+		return Config{}, fmt.Errorf("invalid SMS_BULK_MAX_CONCURRENCY: %w", err)
+	}
+
 	cfg := Config{
 		Env:                        getEnv("APP_ENV", "development"),
 		Host:                       getEnv("APP_HOST", "0.0.0.0"),
@@ -80,6 +98,14 @@ func Load() (Config, error) {
 		ObservabilityRetentionDays: retentionDays,
 		MetricsEnabled:             getEnv("METRICS_ENABLED", "true") != "false",
 		MetricsServiceName:         getEnv("METRICS_SERVICE_NAME", "rahil_api"),
+		KavenegarAPIKey:            strings.TrimSpace(os.Getenv("KAVENEGAR_API_KEY")),
+		KavenegarSender:            getEnv("KAVENEGAR_SENDER", getEnv("SMS_SENDER_ID", "")),
+		KavenegarBirthdayTemplate:  strings.TrimSpace(getEnv("KAVENEGAR_BIRTHDAY_TEMPLATE", "birthday")),
+		KavenegarEnabled:           getEnv("KAVENEGAR_ENABLED", "false") == "true",
+		SMSBirthdayCron:            getEnv("SMS_BIRTHDAY_CRON", "0 9 * * *"),
+		SMSBirthdayTZ:              getEnv("SMS_BIRTHDAY_TZ", "Asia/Tehran"),
+		SMSBulkBatchSize:           bulkBatchSize,
+		SMSBulkMaxConcurrency:      bulkMaxConcurrency,
 	}
 
 	if err := cfg.Validate(usingDefaultSecret); err != nil {
@@ -112,11 +138,23 @@ func (c Config) Validate(usingDefaultSecret bool) error {
 		if len(c.JWTAccessSecret) < minJWTSecretLength {
 			return fmt.Errorf("JWT_ACCESS_SECRET must be at least %d characters in production", minJWTSecretLength)
 		}
-		return nil
+	} else if usingDefaultSecret && len(c.JWTAccessSecret) < minJWTSecretLength {
+		return fmt.Errorf("development JWT default is too short; set JWT_ACCESS_SECRET in .env")
 	}
 
-	if usingDefaultSecret && len(c.JWTAccessSecret) < minJWTSecretLength {
-		return fmt.Errorf("development JWT default is too short; set JWT_ACCESS_SECRET in .env")
+	if c.KavenegarEnabled {
+		if strings.TrimSpace(c.KavenegarAPIKey) == "" {
+			return fmt.Errorf("KAVENEGAR_API_KEY is required when KAVENEGAR_ENABLED=true")
+		}
+		if strings.TrimSpace(c.KavenegarBirthdayTemplate) == "" {
+			return fmt.Errorf("KAVENEGAR_BIRTHDAY_TEMPLATE is required when KAVENEGAR_ENABLED=true")
+		}
+		if c.SMSBulkBatchSize < 1 || c.SMSBulkBatchSize > 200 {
+			return fmt.Errorf("SMS_BULK_BATCH_SIZE must be between 1 and 200")
+		}
+		if c.SMSBulkMaxConcurrency < 1 {
+			return fmt.Errorf("SMS_BULK_MAX_CONCURRENCY must be at least 1")
+		}
 	}
 
 	return nil

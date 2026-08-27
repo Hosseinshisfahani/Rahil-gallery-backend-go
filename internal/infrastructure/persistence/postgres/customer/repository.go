@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -302,6 +303,75 @@ func (r *Repository) SoftDelete(ctx context.Context, id shared.ID) error {
 		return shared.ErrNotFound
 	}
 	return nil
+}
+
+func (r *Repository) ListBirthdayToday(ctx context.Context, day time.Time) ([]domain.BirthdayRecipient, error) {
+	const q = `
+SELECT id, first_name, last_name, phone
+FROM customers
+WHERE deleted_at IS NULL
+  AND birthday IS NOT NULL
+  AND EXTRACT(MONTH FROM birthday) = EXTRACT(MONTH FROM $1::date)
+  AND EXTRACT(DAY FROM birthday) = EXTRACT(DAY FROM $1::date)
+`
+	rows, err := r.pool.Query(ctx, q, day)
+	if err != nil {
+		return nil, fmt.Errorf("list birthday today: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.BirthdayRecipient
+	for rows.Next() {
+		var rec domain.BirthdayRecipient
+		if err := rows.Scan(&rec.ID, &rec.FirstName, &rec.LastName, &rec.Phone); err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) ListPhonesByFilter(ctx context.Context, filter domain.ListFilter) ([]domain.BirthdayRecipient, error) {
+	q := buildListQuery(filter, nil)
+	sql := `
+SELECT c.id, c.first_name, c.last_name, c.phone
+` + listBaseFrom + `
+` + q.where + `
+ORDER BY c.created_at DESC`
+	rows, err := r.pool.Query(ctx, sql, q.args...)
+	if err != nil {
+		return nil, fmt.Errorf("list phones by filter: %w", err)
+	}
+	defer rows.Close()
+
+	var out []domain.BirthdayRecipient
+	for rows.Next() {
+		var rec domain.BirthdayRecipient
+		if err := rows.Scan(&rec.ID, &rec.FirstName, &rec.LastName, &rec.Phone); err != nil {
+			return nil, err
+		}
+		out = append(out, rec)
+	}
+	return out, rows.Err()
+}
+
+func (r *Repository) WasBirthdaySMSSent(ctx context.Context, customerID shared.ID, day time.Time) (bool, error) {
+	const q = `SELECT EXISTS(
+		SELECT 1 FROM sms_birthday_log WHERE customer_id = $1 AND sent_on = $2::date
+	)`
+	var exists bool
+	err := r.pool.QueryRow(ctx, q, customerID, day).Scan(&exists)
+	return exists, err
+}
+
+func (r *Repository) RecordBirthdaySMS(ctx context.Context, customerID shared.ID, day time.Time, status, errMsg string) error {
+	const q = `
+INSERT INTO sms_birthday_log (customer_id, sent_on, status, error_message)
+VALUES ($1, $2::date, $3, NULLIF($4, ''))
+ON CONFLICT (customer_id, sent_on) DO NOTHING
+`
+	_, err := r.pool.Exec(ctx, q, customerID, day, status, errMsg)
+	return err
 }
 
 type scannable interface {
