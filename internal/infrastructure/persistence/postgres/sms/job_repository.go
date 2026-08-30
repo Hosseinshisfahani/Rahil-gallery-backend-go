@@ -5,11 +5,14 @@ import (
 	"encoding/json"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/domain/shared"
 )
+
+const maxLastErrorRunes = 2000
 
 type JobRepository struct {
 	pool *pgxpool.Pool
@@ -48,11 +51,16 @@ func (r *JobRepository) MarkRunning(ctx context.Context, id uuid.UUID) error {
 	return err
 }
 
-func (r *JobRepository) MarkFinished(ctx context.Context, id uuid.UUID, status string, sent, failed int) error {
+func (r *JobRepository) MarkFinished(ctx context.Context, id uuid.UUID, status string, sent, failed int, lastError string) error {
+	lastError = truncateRunes(strings.TrimSpace(lastError), maxLastErrorRunes)
+	var errPtr *string
+	if lastError != "" {
+		errPtr = &lastError
+	}
 	_, err := r.pool.Exec(ctx, `
 UPDATE sms_jobs
-SET status=$2, sent_count=$3, failed_count=$4, completed_at=NOW(), updated_at=NOW()
-WHERE id=$1`, id, status, sent, failed)
+SET status=$2, sent_count=$3, failed_count=$4, last_error=$5, completed_at=NOW(), updated_at=NOW()
+WHERE id=$1`, id, status, sent, failed, errPtr)
 	return err
 }
 
@@ -66,6 +74,7 @@ type Job struct {
 	FailedCount         int        `json:"failed"`
 	BatchCount          int        `json:"batches"`
 	SellerNote          *string    `json:"sellerNote"`
+	LastError           *string    `json:"lastError"`
 	CreatedAt           time.Time  `json:"createdAt"`
 	UpdatedAt           time.Time  `json:"updatedAt"`
 	CompletedAt         *time.Time `json:"completedAt"`
@@ -96,7 +105,7 @@ func (r *JobRepository) List(ctx context.Context, page, perPage int) (ListResult
 	rows, err := r.pool.Query(ctx, `
 SELECT id, status, message,
        matched_count, skipped_invalid_phone, sent_count, failed_count, batch_count,
-       seller_note, created_at, updated_at, completed_at
+       seller_note, last_error, created_at, updated_at, completed_at
 FROM sms_jobs
 ORDER BY created_at DESC
 LIMIT $1 OFFSET $2`, perPage, offset)
@@ -111,7 +120,7 @@ LIMIT $1 OFFSET $2`, perPage, offset)
 		if err := rows.Scan(
 			&j.ID, &j.Status, &j.Message,
 			&j.MatchedCount, &j.SkippedInvalidPhone, &j.SentCount, &j.FailedCount, &j.BatchCount,
-			&j.SellerNote, &j.CreatedAt, &j.UpdatedAt, &j.CompletedAt,
+			&j.SellerNote, &j.LastError, &j.CreatedAt, &j.UpdatedAt, &j.CompletedAt,
 		); err != nil {
 			return ListResult{}, err
 		}
@@ -132,15 +141,23 @@ SET seller_note = NULLIF($2, ''), updated_at = NOW()
 WHERE id = $1
 RETURNING id, status, message,
           matched_count, skipped_invalid_phone, sent_count, failed_count, batch_count,
-          seller_note, created_at, updated_at, completed_at`
+          seller_note, last_error, created_at, updated_at, completed_at`
 	var j Job
 	err := r.pool.QueryRow(ctx, q, id, strings.TrimSpace(note)).Scan(
 		&j.ID, &j.Status, &j.Message,
 		&j.MatchedCount, &j.SkippedInvalidPhone, &j.SentCount, &j.FailedCount, &j.BatchCount,
-		&j.SellerNote, &j.CreatedAt, &j.UpdatedAt, &j.CompletedAt,
+		&j.SellerNote, &j.LastError, &j.CreatedAt, &j.UpdatedAt, &j.CompletedAt,
 	)
 	if err != nil {
 		return nil, err
 	}
 	return &j, nil
+}
+
+func truncateRunes(s string, max int) string {
+	if max <= 0 || utf8.RuneCountInString(s) <= max {
+		return s
+	}
+	runes := []rune(s)
+	return string(runes[:max])
 }

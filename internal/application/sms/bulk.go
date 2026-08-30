@@ -113,6 +113,8 @@ func (s *BulkService) runJob(jobID uuid.UUID, receptors []string, message string
 	chunks := make(chan chunk, workers*2)
 	var sent int64
 	var failed int64
+	var firstErrMu sync.Mutex
+	var firstErr string
 	var wg sync.WaitGroup
 
 	for i := 0; i < workers; i++ {
@@ -124,6 +126,11 @@ func (s *BulkService) runJob(jobID uuid.UUID, receptors []string, message string
 				if err != nil {
 					atomic.AddInt64(&failed, int64(len(ch.items)))
 					log.Printf("sms bulk job=%s batch failed: %v", jobID, err)
+					firstErrMu.Lock()
+					if firstErr == "" {
+						firstErr = err.Error()
+					}
+					firstErrMu.Unlock()
 					continue
 				}
 				atomic.AddInt64(&sent, int64(len(ch.items)))
@@ -147,5 +154,5 @@ func (s *BulkService) runJob(jobID uuid.UUID, receptors []string, message string
 	} else if failed > 0 {
 		status = "failed"
 	}
-	_ = s.Jobs.MarkFinished(ctx, jobID, status, int(sent), int(failed))
+	_ = s.Jobs.MarkFinished(ctx, jobID, status, int(sent), int(failed), firstErr)
 }

@@ -67,11 +67,15 @@ func (h *AdminCustomerHandler) SendBulkSMS(c *fiber.Ctx) error {
 }
 
 func filterFromBulkBody(b bulkSMSFilterBody) domain.ListFilter {
+	gender := strings.TrimSpace(b.Gender)
+	if strings.EqualFold(gender, "all") {
+		gender = ""
+	}
 	f := domain.ListFilter{
 		QuickSearch:      strings.TrimSpace(b.Query),
 		Email:            strings.TrimSpace(b.Email),
 		CustomerAgeRange: strings.TrimSpace(b.CustomerAgeRange),
-		Gender:           strings.TrimSpace(b.Gender),
+		Gender:           gender,
 		CustomerTypes:    b.CustomerTypes,
 		PurchaseTypes:    b.PurchaseTypes,
 	}

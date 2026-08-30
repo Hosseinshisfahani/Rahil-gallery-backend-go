@@ -6,6 +6,15 @@ func TestListFilter_HasAdvancedFilters(t *testing.T) {
 	if (ListFilter{QuickSearch: "ali"}).HasAdvancedFilters() {
 		t.Fatal("quick search alone is not advanced")
 	}
+	if (ListFilter{QuickSearch: "حسین", Gender: "all"}).HasAdvancedFilters() {
+		t.Fatal(`gender "all" must not count as advanced`)
+	}
+	if (ListFilter{Gender: "ALL"}).HasAdvancedFilters() {
+		t.Fatal(`gender "ALL" must not count as advanced`)
+	}
+	if !(ListFilter{Gender: "female"}).HasAdvancedFilters() {
+		t.Fatal("concrete gender is advanced")
+	}
 	if !(ListFilter{Email: "a@b.com"}).HasAdvancedFilters() {
 		t.Fatal("email is advanced")
 	}

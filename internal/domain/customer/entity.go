@@ -71,10 +71,11 @@ type ListFilter struct {
 }
 
 func (f ListFilter) HasAdvancedFilters() bool {
+	gender := strings.TrimSpace(f.Gender)
 	return f.CustomerID != nil ||
 		strings.TrimSpace(f.Email) != "" ||
 		strings.TrimSpace(f.CustomerAgeRange) != "" ||
-		strings.TrimSpace(f.Gender) != "" ||
+		(gender != "" && !strings.EqualFold(gender, "all")) ||
 		len(f.CustomerTypes) > 0 ||
 		len(f.PurchaseTypes) > 0 ||
 		f.FirstVisitFrom != nil ||

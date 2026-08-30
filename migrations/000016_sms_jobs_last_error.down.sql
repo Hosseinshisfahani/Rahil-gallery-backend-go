@@ -1,0 +1,1 @@
+ALTER TABLE sms_jobs DROP COLUMN IF EXISTS last_error;

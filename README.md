@@ -27,6 +27,23 @@ make fetch-catalog-images
 make seed-small
 ```
 
+## SMS (Kavenegar)
+
+Bulk send and birthday Lookup are Go-owned. Local default is the noop provider until `KAVENEGAR_ENABLED=true`.
+
+| Env | Notes |
+|-----|--------|
+| `KAVENEGAR_API_KEY` | Panel API key |
+| `KAVENEGAR_SENDER` / `SMS_SENDER_ID` | Sender line — must be authorized for that key |
+| `KAVENEGAR_BIRTHDAY_TEMPLATE` | Approved Lookup template name (default `birthday`) |
+| `KAVENEGAR_ENABLED` | `false` → noop; `true` → live API |
+| `SMS_BIRTHDAY_CRON` | Quote the cron expr (e.g. `"0 9 * * *"`) |
+| `SMS_BULK_BATCH_SIZE` | Max 200 (Kavenegar send limit) |
+
+**Live QA tip:** If bulk jobs fail with provider status **427** (`استفاده از این خط نیازمند ایجاد سطح دسترسی می باشد`), grant access for the configured sender line on that API key in the Kavenegar console, or set `KAVENEGAR_SENDER` to a line already allowed. Failed job details appear as `lastError` on `GET /api/v1/admin/sms/jobs` and on `/admin/sms`.
+
+**Filter tip:** Bulk SMS uses the same customer filters as the list. Quick search alone must not send `gender: "all"` as an advanced filter (fixed in client + server).
+
 ## Project layout
 
 ```
