@@ -6,8 +6,6 @@ CRM endpoints for managing storefront customers. Used by the Rehil Gallery admin
 **Auth:** Bearer JWT (`admin` or `staff` role required)  
 **Migrations:** `000002_customer_crm`, `000004_customer_list_perf` (denormalized list stats + search indexes)
 
-See [customer-list-performance.md](./customer-list-performance.md) for query optimization details.
-
 ---
 
 ## Table of contents
@@ -32,7 +30,7 @@ See [customer-list-performance.md](./customer-list-performance.md) for query opt
 | Audience | Internal staff (`admin`, `staff` JWT) |
 | Customer auth | OTP via phone (storefront); admin-created accounts have **no password** until the customer sets one |
 | Customer role | All endpoints operate on users with role `customer` |
-| Currency | LTV and order totals are in **IRR** (Toman display is a UI concern) |
+| Commerce | Orders, cart, wishlist, and LTV live in Django. This API does not return them. |
 | IDs | UUID strings (e.g. `550e8400-e29b-41d4-a716-446655440000`) |
 
 ### Endpoint summary
@@ -130,8 +128,7 @@ Single `CustomerDetail` object (no wrapper).
 
 | Field type | Format | Example |
 |------------|--------|---------|
-| Summary dates (`registeredAt`, `lastActivityAt`, order `date`) | `YYYY-MM-DD` | `"2024-03-12"` |
-| Timestamps (`notes.createdAt`, `auditLog.timestamp`) | RFC 3339 UTC | `"2026-05-30T16:40:00Z"` |
+| CRM dates (`createdAt`, birthday, visit dates) | `YYYY-MM-DD` | `"2024-03-12"` |
 
 ---
 
@@ -164,21 +161,6 @@ Paginated customer list with **quick search** or **advanced filters** (mutually 
 |-----------|------|-------------|
 | `id` | UUID | Exact customer ID |
 | `email` | string | Partial email match (case-insensitive) |
-| `segment` | string | `new` · `active` · `returning` · `vip` · `inactive` |
-| `status` | string | `active` · `blocked` |
-| `vip` | boolean | `true` to filter VIP customers only |
-| `ltvMin` | number | Minimum lifetime value (IRR) |
-| `ltvMax` | number | Maximum lifetime value (IRR) |
-| `ordersMin` | int | Minimum order count |
-| `ordersMax` | int | Maximum order count |
-| `registeredFrom` | date | Registration on or after (`YYYY-MM-DD`) |
-| `registeredTo` | date | Registration on or before |
-| `lastPurchaseFrom` | date | Last purchase on or after |
-| `lastPurchaseTo` | date | Last purchase on or before |
-| `lastActivityFrom` | date | Last activity on or after |
-| `lastActivityTo` | date | Last activity on or before |
-| `tags` | string | Comma-separated operational tags (overlap match) |
-| `hasPurchased` | string | `yes` or `no` |
 | `ageRange` | string | Imported CRM age bucket: `1-7` · `7-14` · `14-21` · `21-40` · `40+` |
 | `gender` | string | Imported CRM gender: `male` · `female` · `other` |
 | `customerTypes` | string | Comma-separated imported customer types |
@@ -267,7 +249,7 @@ Selecting `customerType: "vip"` automatically sets `isVip: true`.
 
 ### GET `/api/v1/admin/customers/:id`
 
-Full customer profile including lifecycle metrics, orders, wishlist, notes, and audit log.
+Full CRM profile (contact fields, import profile, and signature). Orders and wishlist are not included.
 
 **Path:** `id` — customer UUID
 
@@ -404,99 +386,32 @@ Returned in list responses.
 | `id` | string | UUID |
 | `fullName` | string | First + last name |
 | `phone` | string | Primary identifier |
-| `registeredAt` | string | Account creation date |
-| `lastActivityAt` | string | Last engagement date |
-| `lastPurchaseDate` | string? | Most recent order date |
-| `totalOrders` | int | Completed order count |
-| `totalLtv` | number | Lifetime value (IRR) |
-| `segment` | string | Computed segment (see [§6](#6-segments--status)) |
-| `status` | string | `active` or `blocked` |
-| `isVip` | boolean | VIP flag |
-| `tags` | string[] | Operational tags |
-| `customerType` | string? | CRM customer type (from import profile) |
-| `purchasedCategories` | string[] | CRM product categories (from import profile) |
-| `country` | string | Always `"IR"` |
+| `customerType` | string | CRM customer type |
+| `purchasedCategories` | string[] | CRM product categories from the import profile |
+| `customerAgeRange` | string? | Imported age bucket |
+| `gender` | string? | Imported gender |
+| `createdAt` | string | Record creation date (`YYYY-MM-DD`) |
 | `href` | string | Admin UI path, e.g. `/admin/customers/{id}` |
 
 ### 5.2 CustomerDetail
 
-Extends `CustomerSummary` with profile, commerce, and CRM data.
+Extends `CustomerSummary` with the CRM profile. It does not include orders, wishlist, LTV, or cart metrics.
 
 | Field | Type | Description |
 |-------|------|-------------|
 | `email` | string? | Optional email |
-| `locale` | string | `"fa"` or `"en"` |
-| `defaultRingSize` | string? | Preferred ring size |
-| `averageOrderValue` | number | LTV / order count |
-| `firstPurchaseDate` | string? | First order date |
-| `vipSource` | string? | `"manual"` or `"automatic"` |
-| `topCategories` | object[] | `{ category, count, percentage }` |
-| `wishlistCount` | int | Current wishlist size |
-| `wishlistAdditions` | int | Placeholder (`0`) |
-| `wishlistRemovals` | int | Placeholder (`0`) |
-| `wishlistConversionRate` | number | Placeholder (`0`) |
-| `cartAbandonmentCount` | int | Placeholder (`0`) |
-| `configuratorUsageCount` | int | Placeholder (`0`) |
-| `engagementScore` | int | 0–100 heuristic from orders + wishlist |
-| `repeatPurchaseRate` | number | Derived from order count |
-| `purchaseFrequency` | number | Order count as float |
-| `funnelPosition` | string | `awareness` · `consideration` · `purchased` |
-| `blockReason` | string? | Set when blocked |
-| `blockNote` | string? | Block note |
-| `orders` | object[] | Order history (see below) |
-| `wishlist` | object[] | Saved items |
-| `notes` | object[] | Internal CRM notes |
-| `auditLog` | object[] | Admin action history |
-| `importMode` | string? | `"quick"` or `"history_included"` |
-| `importProfile` | object? | CRM import payload |
-
-**Order object**
-
-| Field | Type |
-|-------|------|
-| `id` | string (UUID) |
-| `date` | string (`YYYY-MM-DD`) |
-| `total` | number |
-| `status` | string (`pending`, `confirmed`, `shipped`, etc.) |
-| `itemCount` | int |
-| `hasReturn` | boolean |
-| `href` | string |
-
-**Wishlist item**
-
-| Field | Type |
-|-------|------|
-| `id` | string (variant UUID) |
-| `productName` | string |
-| `category` | string |
-| `price` | number |
-| `savedAt` | string |
-| `isConfiguration` | boolean |
-| `configurationSummary` | string? |
-
-**Note**
-
-| Field | Type |
-|-------|------|
-| `id` | string |
-| `author` | string (staff full name) |
-| `body` | string |
-| `createdAt` | string (RFC 3339) |
-
-**Audit log entry**
-
-| Field | Type |
-|-------|------|
-| `id` | string |
-| `adminId` | string |
-| `adminName` | string |
-| `action` | string (see below) |
-| `targetUserId` | string |
-| `timestamp` | string (RFC 3339) |
-| `reason` | string? |
-| `details` | string? |
-
-**Audit actions:** `account_created` · `block` · `unblock` · `vip_assign` · `vip_remove` · `tag_add` · `tag_remove` · `profile_edit` · `note_add`
+| `job` | string? | Occupation |
+| `address` | string? | Address |
+| `melliCode` | string? | National ID |
+| `postalCode` | string? | Postal code |
+| `birthday` | string? | `YYYY-MM-DD` |
+| `marriageDate` | string? | `YYYY-MM-DD` |
+| `importantDate` | string? | `YYYY-MM-DD` |
+| `firstVisitDate` | string? | `YYYY-MM-DD` |
+| `description` | string? | Profile note |
+| `marketerNote` | string? | Staff note |
+| `signatureUrl` | string? | Public signature image path |
+| `importProfile` | object | Same CRM fields used by create/update |
 
 ### 5.3 Enums
 
@@ -581,10 +496,10 @@ curl -s "http://localhost:8080/api/v1/admin/customers?q=912&page=1&perPage=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
-### Advanced filters (segment, LTV, dates — `q` ignored)
+### Advanced filters (CRM fields — `q` ignored)
 
 ```bash
-curl -s "http://localhost:8080/api/v1/admin/customers?segment=vip&ltvMin=1000000&page=1&perPage=10" \
+curl -s "http://localhost:8080/api/v1/admin/customers?gender=female&customerTypes=vip&page=1&perPage=10" \
   -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -660,7 +575,7 @@ Returns built-in segment counts (from `customer_profiles.segment`) and the curre
       "id": "uuid",
       "name": "VIP high spenders",
       "viewType": "segment",
-      "filters": { "segment": "vip", "ltvMin": 5000000 },
+      "filters": { "customerTypes": ["vip"] },
       "isShared": false,
       "position": 0,
       "ownerId": "uuid",
@@ -673,7 +588,7 @@ Returns built-in segment counts (from `customer_profiles.segment`) and the curre
 
 ### Saved views CRUD
 
-`filters` mirrors list query params (`q`, `segment`, `ltvMin`, dates as `YYYY-MM-DD`, etc.). Apply a saved view by copying `filters` onto `GET /admin/customers`.
+`filters` mirrors list query params (`q`, `gender`, `customerTypes`, dates as `YYYY-MM-DD`, etc.). Apply a saved view by copying `filters` onto `GET /admin/customers`.
 
 | `viewType` | Use case | Required in `filters` |
 |------------|----------|------------------------|
@@ -688,9 +603,9 @@ curl -s -X POST "http://localhost:8080/api/v1/admin/customers/saved-views" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
-    "name": "High LTV VIP",
+    "name": "VIP customers",
     "viewType": "filter",
-    "filters": { "segment": "vip", "ltvMin": 10000000 },
+    "filters": { "customerTypes": ["vip"] },
     "isShared": true,
     "position": 1
   }'
@@ -706,7 +621,6 @@ curl -s -X POST "http://localhost:8080/api/v1/admin/customers/saved-views" \
 | Fine-grained roles | `support`, `crm`, `analyst` permission matrix |
 | OTP login + set-password | Customers with null `password_hash` |
 | Export audit logging | Server-side export event |
-| Behavioral metrics | Cart abandonment, configurator usage (currently `0`) |
 
 ---
 
@@ -714,6 +628,4 @@ curl -s -X POST "http://localhost:8080/api/v1/admin/customers/saved-views" \
 
 | Document | Description |
 |----------|-------------|
-| [technical-workflow.md](./technical-workflow.md) | Architecture and auth reference |
-| [database-schema.md](./database-schema.md) | `customer_profiles`, notes, audit tables |
 | [migrations/000002_customer_crm.up.sql](../migrations/000002_customer_crm.up.sql) | CRM schema migration |

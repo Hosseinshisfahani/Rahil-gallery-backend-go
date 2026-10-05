@@ -1,0 +1,2 @@
+-- Irreversible. These tables are not recreated here.
+-- A fresh database still applies the historical migrations before this one.

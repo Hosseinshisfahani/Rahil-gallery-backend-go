@@ -9,12 +9,10 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
-	appsms "github.com/rahil-gallery/rahil-gallery-server/internal/application/sms"
 	"github.com/rahil-gallery/rahil-gallery-server/internal/config"
-	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres"
-	customerpg "github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres/customer"
-	infrasms "github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/sms"
-	httpx "github.com/rahil-gallery/rahil-gallery-server/internal/interfaces/http"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/handler"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/repository"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/service"
 )
 
 func main() {
@@ -24,21 +22,49 @@ func main() {
 	}
 
 	ctx := context.Background()
-	var pool = connectDatabase(ctx, cfg.DatabaseURL)
+	pool := connectDatabase(ctx, cfg.DatabaseURL)
 
-	smsProvider := infrasms.NewProvider(cfg)
-	birthdayRunner := &appsms.BirthdayRunner{
-		Customers: customerpg.NewRepository(pool),
+	customers := repository.NewRepository(pool)
+	jobs := repository.NewJobRepository(pool)
+	smsProvider := service.NewProvider(cfg)
+	tokens := service.NewJWTProvider(cfg)
+	authSvc := service.NewAuthService(
+		cfg,
+		repository.NewUserRepository(pool),
+		repository.NewRoleRepository(pool),
+		repository.NewRefreshTokenRepository(pool),
+		tokens,
+	)
+	customerSvc := service.NewCustomerService(customers, cfg.CustomerSignaturesDir)
+	bulk := &service.BulkService{
+		Customers: customers,
+		Jobs:      jobs,
+		SMS:       smsProvider,
+		Sender:    cfg.KavenegarSender,
+		BatchSize: cfg.SMSBulkBatchSize,
+		Workers:   cfg.SMSBulkMaxConcurrency,
+	}
+
+	stopCron, err := service.StartBirthdayCron(ctx, &service.BirthdayRunner{
+		Customers: customers,
 		SMS:       smsProvider,
 		Template:  cfg.KavenegarBirthdayTemplate,
-	}
-	stopCron, err := appsms.StartBirthdayCron(ctx, birthdayRunner, cfg.SMSBirthdayCron, cfg.SMSBirthdayTZ)
+	}, cfg.SMSBirthdayCron, cfg.SMSBirthdayTZ)
 	if err != nil {
 		log.Fatalf("birthday cron: %v", err)
 	}
 	defer stopCron()
 
-	app := httpx.NewApp(httpx.RouterDeps{Pool: pool, Config: cfg})
+	app := handler.NewApp(handler.AppDeps{
+		Pool:      pool,
+		Config:    cfg,
+		Tokens:    tokens,
+		Auth:      authSvc,
+		Customers: customers,
+		Customer:  customerSvc,
+		Bulk:      bulk,
+		Jobs:      jobs,
+	})
 
 	go func() {
 		log.Printf("server listening on %s (env=%s)", cfg.Addr(), cfg.Env)
@@ -69,7 +95,7 @@ func connectDatabase(ctx context.Context, databaseURL string) *pgxpool.Pool {
 		log.Fatal("DATABASE_URL not set — copy .env.example to .env, run make docker-dev, then make run")
 	}
 
-	pool, err := postgres.NewPool(ctx, databaseURL)
+	pool, err := repository.NewPool(ctx, databaseURL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}

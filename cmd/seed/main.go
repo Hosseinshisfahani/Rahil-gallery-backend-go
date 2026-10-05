@@ -8,8 +8,8 @@ import (
 	"os"
 
 	"github.com/rahil-gallery/rahil-gallery-server/internal/config"
-	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres"
-	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres/seed"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/repository"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/seed"
 )
 
 func main() {
@@ -17,8 +17,6 @@ func main() {
 	force := flag.Bool("force", false, "seed even if dev data already exists")
 	customers := flag.Int("customers", seed.DefaultCustomers,
 		"total customers to generate (8–100000; includes 8 fixed fixtures)")
-	products := flag.Int("products", seed.DefaultProducts,
-		"total products to generate (3–10000; includes 3 fixed fixtures)")
 	flag.Parse()
 
 	cfg, err := config.Load()
@@ -35,7 +33,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	pool, err := postgres.NewPool(ctx, cfg.DatabaseURL)
+	pool, err := repository.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}
@@ -43,7 +41,6 @@ func main() {
 
 	opts := seed.Options{
 		Customers: *customers,
-		Products:  *products,
 		Reset:     *reset,
 		Force:     *force,
 	}

@@ -36,10 +36,8 @@ run_docker() {
 		-e "JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-dev-docker-secret-change-in-production}" \
 		-e "JWT_ACCESS_TTL=${JWT_ACCESS_TTL:-15m}" \
 		-e "JWT_REFRESH_TTL=${JWT_REFRESH_TTL:-168h}" \
-		-e "CATALOG_ASSETS_DIR=/app/data/catalog-images" \
 		-e "CUSTOMER_SIGNATURES_DIR=/app/data/customer-signatures" \
 		-v "$API_BIN:/app/api:ro" \
-		-v "$ROOT/data/catalog-images:/app/data/catalog-images:ro" \
 		-v "$ROOT/data/customer-signatures:/app/data/customer-signatures" \
 		alpine:3.20 /app/api >/dev/null
 	if ! docker ps --filter "name=^${CONTAINER_NAME}$" --filter status=running -q | grep -q .; then

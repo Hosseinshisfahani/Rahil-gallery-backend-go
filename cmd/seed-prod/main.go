@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/rahil-gallery/rahil-gallery-server/internal/config"
-	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres"
-	"github.com/rahil-gallery/rahil-gallery-server/internal/infrastructure/persistence/postgres/seed"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/repository"
+	"github.com/rahil-gallery/rahil-gallery-server/internal/seed"
 )
 
 func main() {
@@ -51,7 +51,7 @@ func main() {
 	}
 
 	ctx := context.Background()
-	pool, err := postgres.NewPool(ctx, cfg.DatabaseURL)
+	pool, err := repository.NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		log.Fatalf("database: %v", err)
 	}

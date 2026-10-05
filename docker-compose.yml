@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: rahil_gallery
     ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -16,21 +16,6 @@ services:
       timeout: 5s
       retries: 10
       start_period: 5s
-
-  pgadmin:
-    image: ${PGADMIN_IMAGE:-dpage/pgadmin4:latest}
-    container_name: rahil-gallery-pgadmin
-    environment:
-      PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: 0000
-    ports:
-      - "${PGADMIN_PORT:-5050}:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
-    depends_on:
-      db:
-        condition: service_healthy
-    restart: unless-stopped
 
   migrate:
     image: ${MIGRATE_IMAGE:-migrate/migrate:v4.18.1}
@@ -57,7 +42,6 @@ services:
     ports:
       - "${APP_PORT:-8080}:8080"
     volumes:
-      - ./data/catalog-images:/app/data/catalog-images:ro
       - ./data/customer-signatures:/app/data/customer-signatures
     environment:
       APP_ENV: ${APP_ENV:-development}
@@ -67,7 +51,6 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-dev-docker-secret-change-in-production}
       JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
       JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-168h}
-      CATALOG_ASSETS_DIR: /app/data/catalog-images
       CUSTOMER_SIGNATURES_DIR: /app/data/customer-signatures
     depends_on:
       db:
@@ -84,4 +67,3 @@ services:
 
 volumes:
   postgres_data:
-  pgadmin_data:

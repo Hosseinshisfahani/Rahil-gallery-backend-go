@@ -20,28 +20,23 @@ const DefaultDevJWTSecret = "dev-docker-secret-change-in-production"
 const minJWTSecretLength = 32
 
 type Config struct {
-	Env                        string
-	Host                       string
-	Port                       int
-	DatabaseURL                string
-	JWTAccessSecret            string
-	JWTAccessTTL               time.Duration
-	JWTRefreshTTL              time.Duration
-	CatalogAssetsDir           string
-	CustomerSignaturesDir      string
-	ObservabilityIngestKey     string
-	ObservabilityRetentionDays int
-	MetricsEnabled             bool
-	MetricsServiceName         string
+	Env                   string
+	Host                  string
+	Port                  int
+	DatabaseURL           string
+	JWTAccessSecret       string
+	JWTAccessTTL          time.Duration
+	JWTRefreshTTL         time.Duration
+	CustomerSignaturesDir string
 	// Kavenegar / SMS
 	KavenegarAPIKey           string
 	KavenegarSender           string
 	KavenegarBirthdayTemplate string
-    KavenegarEnabled          bool
-    SMSBirthdayCron           string
-    SMSBirthdayTZ             string
-    SMSBulkBatchSize          int
-    SMSBulkMaxConcurrency     int
+	KavenegarEnabled          bool
+	SMSBirthdayCron           string
+	SMSBirthdayTZ             string
+	SMSBulkBatchSize          int
+	SMSBulkMaxConcurrency     int
 }
 
 func Load() (Config, error) {
@@ -70,11 +65,6 @@ func Load() (Config, error) {
 		secret = DefaultDevJWTSecret
 	}
 
-	retentionDays, err := strconv.Atoi(getEnv("OBSERVABILITY_RETENTION_DAYS", "7"))
-	if err != nil {
-		return Config{}, fmt.Errorf("invalid OBSERVABILITY_RETENTION_DAYS: %w", err)
-	}
-
 	bulkBatchSize, err := strconv.Atoi(getEnv("SMS_BULK_BATCH_SIZE", "200"))
 	if err != nil {
 		return Config{}, fmt.Errorf("invalid SMS_BULK_BATCH_SIZE: %w", err)
@@ -85,27 +75,22 @@ func Load() (Config, error) {
 	}
 
 	cfg := Config{
-		Env:                        getEnv("APP_ENV", "development"),
-		Host:                       getEnv("APP_HOST", "0.0.0.0"),
-		Port:                       port,
-		DatabaseURL:                os.Getenv("DATABASE_URL"),
-		JWTAccessSecret:            secret,
-		JWTAccessTTL:               accessTTL,
-		JWTRefreshTTL:              refreshTTL,
-		CatalogAssetsDir:           getEnv("CATALOG_ASSETS_DIR", "data/catalog-images"),
-		CustomerSignaturesDir:      getEnv("CUSTOMER_SIGNATURES_DIR", "data/customer-signatures"),
-		ObservabilityIngestKey:     os.Getenv("OBSERVABILITY_INGEST_KEY"),
-		ObservabilityRetentionDays: retentionDays,
-		MetricsEnabled:             getEnv("METRICS_ENABLED", "true") != "false",
-		MetricsServiceName:         getEnv("METRICS_SERVICE_NAME", "rahil_api"),
-		KavenegarAPIKey:            strings.TrimSpace(os.Getenv("KAVENEGAR_API_KEY")),
-		KavenegarSender:            getEnv("KAVENEGAR_SENDER", getEnv("SMS_SENDER_ID", "")),
-		KavenegarBirthdayTemplate:  strings.TrimSpace(getEnv("KAVENEGAR_BIRTHDAY_TEMPLATE", "birthday")),
-		KavenegarEnabled:           getEnv("KAVENEGAR_ENABLED", "false") == "true",
-		SMSBirthdayCron:            getEnv("SMS_BIRTHDAY_CRON", "0 9 * * *"),
-		SMSBirthdayTZ:              getEnv("SMS_BIRTHDAY_TZ", "Asia/Tehran"),
-		SMSBulkBatchSize:           bulkBatchSize,
-		SMSBulkMaxConcurrency:      bulkMaxConcurrency,
+		Env:                       getEnv("APP_ENV", "development"),
+		Host:                      getEnv("APP_HOST", "0.0.0.0"),
+		Port:                      port,
+		DatabaseURL:               os.Getenv("DATABASE_URL"),
+		JWTAccessSecret:           secret,
+		JWTAccessTTL:              accessTTL,
+		JWTRefreshTTL:             refreshTTL,
+		CustomerSignaturesDir:     getEnv("CUSTOMER_SIGNATURES_DIR", "data/customer-signatures"),
+		KavenegarAPIKey:           strings.TrimSpace(os.Getenv("KAVENEGAR_API_KEY")),
+		KavenegarSender:           getEnv("KAVENEGAR_SENDER", getEnv("SMS_SENDER_ID", "")),
+		KavenegarBirthdayTemplate: strings.TrimSpace(getEnv("KAVENEGAR_BIRTHDAY_TEMPLATE", "birthday")),
+		KavenegarEnabled:          getEnv("KAVENEGAR_ENABLED", "false") == "true",
+		SMSBirthdayCron:           getEnv("SMS_BIRTHDAY_CRON", "0 9 * * *"),
+		SMSBirthdayTZ:             getEnv("SMS_BIRTHDAY_TZ", "Asia/Tehran"),
+		SMSBulkBatchSize:          bulkBatchSize,
+		SMSBulkMaxConcurrency:     bulkMaxConcurrency,
 	}
 
 	if err := cfg.Validate(usingDefaultSecret); err != nil {

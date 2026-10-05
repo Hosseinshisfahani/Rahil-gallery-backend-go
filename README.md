@@ -1,12 +1,10 @@
 # Rahil Gallery Backend (Go)
 
-Jewelry e-commerce API — Go, [Fiber](https://gofiber.io/), DDD / Clean Architecture.
+Jewelry e-commerce API — Go and [Fiber](https://gofiber.io/).
 
-This service owns **auth**, **CRM customers**, and **catalog**. Commerce HTTP APIs (cart, orders, payments, promotions) live in [Rahil-gallery-backend-django](../Rahil-gallery-backend-django). Both share the `rahil_gallery` PostgreSQL database and the same `JWT_ACCESS_SECRET`.
+This service owns **auth**, **CRM customers**, and **SMS**. Both backends share the `rahil_gallery` PostgreSQL database and the same `JWT_ACCESS_SECRET`.
 
 The Next.js app in [Rahil-gallery-frontend](../Rahil-gallery-frontend) proxies `/api/v1` to this process (default `:8081`) except commerce prefixes, which go to Django.
-
-**Full technical workflow:** [docs/technical-workflow.md](docs/technical-workflow.md)
 
 ## Local development (recommended)
 
@@ -23,7 +21,6 @@ Health: `GET http://localhost:8081/health`
 Optional seed data (after migrations):
 
 ```bash
-make fetch-catalog-images
 make seed-small
 ```
 
@@ -49,15 +46,17 @@ Bulk send and birthday Lookup are Go-owned. Local default is the noop provider u
 ```
 ├── cmd/api/                 # HTTP entrypoint (Fiber)
 ├── internal/
-│   ├── domain/              # Entities & ports (per bounded context)
-│   ├── application/         # Use cases
-│   ├── infrastructure/      # Postgres, JWT, static files
-│   └── interfaces/          # HTTP handlers, DTOs, middleware
+│   ├── config/              # Environment configuration
+│   ├── handler/             # HTTP routes, DTOs, middleware
+│   ├── service/             # Auth, customers, SMS
+│   ├── repository/          # Postgres access
+│   ├── model/               # Entities and shared errors
+│   └── seed/                # Local and production seed data
 ├── migrations/              # golang-migrate (Go-owned schema)
 └── docs/
 ```
 
-Do not add new Go migrations that `CREATE` / `ALTER` / `DROP` Django-owned commerce tables. See [docs/strangler-fig-ownership.md](docs/strangler-fig-ownership.md). `make check-ownership` enforces this.
+Do not add new Go migrations that `CREATE` / `ALTER` / `DROP` Django-owned commerce tables. `make check-ownership` enforces this.
 
 ## Configuration
 
@@ -105,8 +104,7 @@ make docker-up-vendor
 |------|--------|------|
 | Auth (register, login, refresh, logout, me) | Live | below |
 | Admin customers CRM | Live | [docs/admin-customers-api.md](docs/admin-customers-api.md) |
-| Catalog (public + admin products) | Live | [docs/catalog-api.md](docs/catalog-api.md), [docs/admin-products-api.md](docs/admin-products-api.md) |
-| Cart / orders / payments | Django | [Rahil-gallery-backend-django](../Rahil-gallery-backend-django) |
+| Admin SMS | Live | above |
 
 Prefix: `/api/v1`. Envelope: `{ "success": true, "data": … }` or `{ "success": false, "error": { "code", "message" } }`.
 
@@ -145,8 +143,6 @@ Refresh tokens stay on this service. Django only **verifies** access JWTs.
 
 ## Testing
 
-See [docs/testing.md](docs/testing.md).
-
 ```bash
 make test          # unit + bdd + feature
 make test-unit
@@ -154,10 +150,3 @@ make test-bdd
 make test-feature
 make check-ownership
 ```
-
-## Further reading
-
-- [docs/technical-workflow.md](docs/technical-workflow.md) — architecture, auth, Docker, DB
-- [docs/database-schema.md](docs/database-schema.md) — ER and context map
-- [docs/strangler-fig-ownership.md](docs/strangler-fig-ownership.md) — table freeze
-- [docs/cicd-setup.md](docs/cicd-setup.md) — GitHub Actions → VPS

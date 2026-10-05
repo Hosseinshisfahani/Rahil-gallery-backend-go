@@ -1,5 +1,0 @@
-# Use after: go mod vendor  (or: make docker-vendor)
-services:
-  api:
-    build:
-      dockerfile: Dockerfile.vendor

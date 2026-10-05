@@ -12,14 +12,10 @@ export GOPROXY
 
 .PHONY: test test-unit test-bdd test-feature test-integration \
 	migrate-up migrate-down migrate-create migrate-up-local \
-	seed seed-reset seed-small seed-products seed-prod seed-prod-password fetch-catalog-images \
-	docker-up docker-up-vendor docker-vendor docker-down docker-dev docker-prod-up docker-prod-migrate docker-prod-api docker-observability-up docker-logs docker-migrate \
+	seed seed-reset seed-small seed-prod seed-prod-password \
+	docker-up docker-down docker-dev docker-logs docker-migrate \
 	run dev dev-check run-docker stop-api run-vendor build-linux run-binary \
 	check-ownership
-
-# Strangler Fig: block new Go migrations that touch Django-owned commerce tables
-check-ownership:
-	bash scripts/check_migration_ownership.sh go
 
 # Local API on :8081 by default (requires: make docker-dev)
 dev-check:
@@ -53,34 +49,14 @@ PROD_SEED_CMD = $(if $(wildcard bin/seed-prod),./bin/seed-prod,go run ./cmd/seed
 run-binary:
 	./bin/rahil-api
 
-# Dev machine only — pulls golang/alpine from Docker Hub (fails on blocked VPS).
 docker-up:
 	docker compose up -d --build
-
-# VPS / production — no build; uses pre-loaded image from CI/CD (rahil-gallery-api:latest).
-docker-prod-up:
-	eval "$$(bash scripts/export-compose-env.sh)" && docker compose -f docker-compose.prod.yml up -d
-
-docker-prod-migrate:
-	eval "$$(bash scripts/export-compose-env.sh)" && docker compose -f docker-compose.prod.yml up migrate --abort-on-container-exit
-
-docker-prod-api:
-	eval "$$(bash scripts/export-compose-env.sh)" && docker compose -f docker-compose.prod.yml up -d --force-recreate api
-
-docker-observability-up:
-	eval "$$(bash scripts/export-compose-env.sh)" && docker compose -f docker-compose.prod.yml -f docker-compose.observability.yml up -d prometheus grafana
-
-docker-vendor:
-	go mod vendor
-
-docker-up-vendor: docker-vendor
-	docker compose -f docker-compose.yml -f docker-compose.vendor.yml up -d --build
 
 docker-down:
 	docker compose down
 
 docker-dev:
-	docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d db migrate
+	docker compose up -d db migrate
 
 docker-logs:
 	docker compose logs -f api
@@ -134,32 +110,24 @@ endif
 # Dev fake data (requires: make docker-dev, migrations applied)
 # Uses scripts/run-seed.sh → Compose network db:5432 (host :5432 publish can hang on some Docker setups).
 # SEED_CUSTOMERS: 8 (fixtures only) … 100000 (default 10000)
-# SEED_PRODUCTS:  3 (fixtures only) … 10000 (default 100)
 SEED_CUSTOMERS ?= 10000
-SEED_PRODUCTS  ?= 100
 
 seed:
-	bash scripts/run-seed.sh --customers=$(SEED_CUSTOMERS) --products=$(SEED_PRODUCTS)
+	bash scripts/run-seed.sh --customers=$(SEED_CUSTOMERS)
 
 seed-reset:
-	bash scripts/run-seed.sh --reset --customers=$(SEED_CUSTOMERS) --products=$(SEED_PRODUCTS)
+	bash scripts/run-seed.sh --reset --customers=$(SEED_CUSTOMERS)
 
 seed-small:
-	bash scripts/run-seed.sh --reset --customers=8 --products=3
+	bash scripts/run-seed.sh --reset --customers=8
 
-seed-products:
-	bash scripts/run-seed.sh --reset --customers=8 --products=$(SEED_PRODUCTS)
-
-# Production bootstrap — admin account only (no demo customers/catalog).
+# Production bootstrap — admin account only (no demo customers).
 # Requires APP_ENV=production (or --allow-dev for local smoke tests).
 seed-prod:
 	DATABASE_URL="$(DATABASE_URL)" $(PROD_SEED_CMD)
 
 seed-prod-password:
 	DATABASE_URL="$(DATABASE_URL)" $(PROD_SEED_CMD) --update-password
-
-fetch-catalog-images:
-	bash scripts/fetch-catalog-images.sh
 
 # Migrations against Postgres on host port 5432 (Linux: --network host)
 migrate-up-local:
