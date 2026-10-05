@@ -6,6 +6,8 @@ This service owns **auth**, **CRM customers**, and **SMS**. Both backends share 
 
 The Next.js app in [Rahil-gallery-frontend](../Rahil-gallery-frontend) proxies `/api/v1` to this process (default `:8081`) except commerce prefixes, which go to Django.
 
+Live server orchestration and deploys are managed via `~/source/rahil-stack`.
+
 ## Local development (recommended)
 
 Postgres on host `:5433`, API on host `:8081` — matches the frontend `.env.example`.
